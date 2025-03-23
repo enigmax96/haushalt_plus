@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wochenplan</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <div class="navbar">
+        <a href="/" class="{{ 'active' if request.path == '/' else '' }}">Startseite</a>
+        <a href="/grocery" class="{{ 'active' if request.path == '/grocery' else '' }}">Einkaufsliste</a>
+        <a href="/mealplan" class="{{ 'active' if request.path == '/mealplan' else '' }}">Wochenplan</a>
+    </div>
+
+    <form action="/mealplan" method="post">
+        <input type="text" name="meal" placeholder="Gericht hinzufügen" required>
+        <button type="submit">Hinzufügen</button>
+    </form>
+
+    <div class="meal-days">
+        {% for day in ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'] %}
+            <h2>{{ day }}</h2>
+            <ul>
+                {% for meal in meals_by_day[day] %}
+                    <li>
+                        {{ meal.name }}
+                        <button data-meal-id="{{ meal.id }}" onclick="deleteMeal(this.getAttribute('data-meal-id'))">Löschen</button>
+
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endfor %}
+        
+        <h2>Sonstige</h2>
+        <ul>
+            {% for meal in meals_by_day['Sonstige'] %}
+                <li>
+                    {{ meal.name }}
+                    <button data-meal-id="{{ meal.id }}" onclick="deleteMeal(this.getAttribute('data-meal-id'))">Delete</button>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <button onclick="deleteAllMeals()">Alle löschen</button>
+
+    <script>
+        function deleteMeal(id) {
+            fetch(`/mealplan/delete/${id}`, { method: 'POST' })
+                .then(() => window.location.reload());
+        }
+
+        function deleteAllMeals() {
+            fetch('/mealplan/delete_all', { method: 'POST' })
+                .then(() => window.location.reload());
+        }
+    </script>
+</body>
+</html>

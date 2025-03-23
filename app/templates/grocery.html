@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Einkaufsliste</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    
+    <div class="navbar">
+        <a href="/" class="{{ 'active' if request.path == '/' else '' }}">Startseite</a>
+        <a href="/grocery" class="{{ 'active' if request.path == '/grocery' else '' }}">Einkaufsliste</a>
+        <a href="/mealplan" class="{{ 'active' if request.path == '/mealplan' else '' }}">Wochenplan</a>
+    </div>
+
+    <form action="/grocery" method="post">
+        <input type="text" name="item" placeholder="Produkt hinzufügen" required>
+        <button type="submit">Hinzufügen</button>
+    </form>
+
+    <ul>
+        {% for item in items %}
+            <li>
+                {{ item.name }}
+                <button data-item-id="{{ item.id }}" onclick="deleteItem(this.getAttribute('data-item-id'))">Löschen</button>
+
+            </li>
+        {% endfor %}
+    </ul>
+
+    <button onclick="deleteAllItems()">Alle löschen</button>
+
+    <script>
+        function deleteItem(id) {
+            fetch(`/grocery/delete/${id}`, { method: 'POST' })
+                .then(() => window.location.reload());
+        }
+
+        function deleteAllItems() {
+            fetch('/grocery/delete_all', { method: 'POST' })
+                .then(() => window.location.reload());
+        }
+    </script>
+</body>
+</html>

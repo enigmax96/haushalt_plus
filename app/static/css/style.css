@@ -1,0 +1,212 @@
+/* General Styling */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #008080; /* Teal */
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+
+/* Header Styling */
+h1, h2 {
+    color: #000000;
+    text-align: center;
+}
+
+/* Grid Layout */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2 columns */
+    gap: 20px;
+}
+
+/* Widgets */
+.weather-widget, .meal-plan-widget {
+    background-color: #ffd700; /* Gold */
+    color: #333;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+}
+
+.clock-widget {
+    background-color: #ffd700; /* Gold */
+    color: #333;
+    padding: 15px;
+    border-radius: 10px;
+    text-align-last: center;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+}
+
+.trash-widget {
+    background-color: #ffd700; /* Gold */
+    color: #333;
+    padding: 15px;
+    border-radius: 10px;
+    text-align-last: center;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Links */
+a {
+    display: inline-block;
+    margin: 10px 0;
+    color: #ffd700;
+    text-decoration: none;
+    font-size: 16px;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Trash Notification */
+#trash-status {
+    padding: 10px;
+    background-color: #ffd700;
+    color: #333;
+    border-radius: 5px;
+    display: inline-block;
+    margin-bottom: 20px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* Buttons */
+button {
+    background-color: #ffd700;
+    color: #333;
+    border: none;
+    padding: 10px 20px;
+    margin: 5px 0;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+button:hover {
+    background-color: #e6c300; /* Darker gold */
+}
+
+/* Lists */
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    padding: 10px;
+    background-color: #fff8dc; /* Light gold background */
+    margin-bottom: 5px;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+li:nth-child(odd) {
+    background-color: #f5f5dc; /* Slightly different gold tone */
+}
+
+/* Form */
+input[type="text"] {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: calc(100% - 22px);
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+/* Meal Plan*/
+.meal-plan {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px; /* Space between the days/meal columns */
+}
+
+.meal-entry {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.day {
+    font-weight: bold;
+    margin-right: 5px;
+    min-width: 40px; /* Ensure the day label takes up consistent space */
+}
+
+.meal {
+    color: #333;
+    font-size: 1.3em;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.meal span {
+    margin-right: 5px;
+    background-color: #e4e4e4;
+    padding: 5px;
+    border-radius: 5px;
+    font-size: 0.9em;
+}
+
+/* NAVBAR */
+.navbar {
+    text-align: center;  /* Centers the text inside the navbar */
+    margin-bottom: 20px; /* Space below navbar */
+}
+
+.navbar a {
+    margin: 0 15px;  /* Adds space between links */
+    font-size: 2em; /* Font size for links */
+    text-decoration: none;  /* Removes the underline */
+    color: #333;  /* Link color */
+    font-weight: bold;  /* Makes the links bold */
+}
+
+.navbar a:hover {
+    color: #007bff;  /* Change color on hover */
+}
+
+/* For links inside other sections */
+.widget-links {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.widget-links a {
+    margin: 0 10px; /* Adjust spacing between links */
+    color: #333;
+    text-decoration: none;
+    font-size: 1.1em;
+}
+
+.widget-links a:hover {
+    color: #007bff;  /* Change color on hover */
+}
+
+/* Highlight the active link with a golden color */
+.navbar a.active {
+    color: gold; /* You can adjust the shade of gold if needed */
+    text-decoration: underline; /* Optional: underline the active link for emphasis */
+}
+
+/* Mobile Styling */
+@media (max-width: 600px) {
+    .grid {
+        grid-template-columns: 1fr; /* Stack vertically on smaller screens */
+    }
+
+    body {
+        padding: 10px;
+    }
+
+    button, input[type="text"] {
+        width: 100%;
+    }
+}

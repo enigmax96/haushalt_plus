@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home Dashboard</title>
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <div class="navbar">
+        <a href="/" class="{{ 'active' if request.path == '/' else '' }}">Startseite</a>
+        <a href="/grocery" class="{{ 'active' if request.path == '/grocery' else '' }}">Einkaufsliste</a>
+        <a href="/mealplan" class="{{ 'active' if request.path == '/mealplan' else '' }}">Wochenplan</a>
+    </div>
+
+    <div class="grid">
+
+        <div class="trash-widget">
+            <h2>Müllabfuhr</h2>
+            <p id="trash-status">{{ trash_status }}</p>
+        </div>
+
+
+        <div class="clock-widget">
+            <h2>Uhrzeit</h2>
+            <p id="clock"></p>
+        </div>
+        <div class="weather-widget">
+            <h2>Wetter</h2>
+            {% if weather %}
+                <p>{{ weather.city }} - {{ weather.date }}</p>
+                <p>Temp: {{ weather.temperature }}°C</p>
+                <p>{{ weather.description.capitalize() }}</p>
+            {% else %}
+                <p>Unable to fetch weather data.</p>
+            {% endif %}
+        </div>
+
+        <div class="meal-plan-widget">
+            <h2>Wochenplan</h2>
+            <div class="meal-plan">
+                <div class="meal-entry">
+                    <span class="day">Mo:</span>
+                    <span class="meal">
+                        {% for meal in meals %}
+                            {% if meal.day == 'Montag' %}
+                                {{ meal.name }}
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                </div>
+        
+                <div class="meal-entry">
+                    <span class="day">Di:</span>
+                    <span class="meal">
+                        {% for meal in meals %}
+                            {% if meal.day == 'Dienstag' %}
+                                {{ meal.name }}
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                </div>
+        
+                <div class="meal-entry">
+                    <span class="day">Mi:</span>
+                    <span class="meal">
+                        {% for meal in meals %}
+                            {% if meal.day == 'Mittwoch' %}
+                                {{ meal.name }}
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                </div>
+        
+                <div class="meal-entry">
+                    <span class="day">Do:</span>
+                    <span class="meal">
+                        {% for meal in meals %}
+                            {% if meal.day == 'Donnerstag' %}
+                                {{ meal.name }}
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                </div>
+        
+                <div class="meal-entry">
+                    <span class="day">Fr:</span>
+                    <span class="meal">
+                        {% for meal in meals %}
+                            {% if meal.day == 'Freitag' %}
+                                {{ meal.name }}
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                </div>
+        
+                <div class="meal-entry">
+                    <span class="day">Sa:</span>
+                    <span class="meal">
+                        {% for meal in meals %}
+                            {% if meal.day == 'Samstag' %}
+                                {{ meal.name }}
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                </div>
+        
+                <div class="meal-entry">
+                    <span class="day">So:</span>
+                    <span class="meal">
+                        {% for meal in meals %}
+                            {% if meal.day == 'Sonntag' %}
+                                {{ meal.name }}
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                </div>
+        
+                <div class="meal-entry">
+                    <span class="day">Sonstige:</span>
+                    <span class="meal">
+                        {% for meal in meals %}
+                            {% if meal.day == 'Sonstige' %}
+                                {{ meal.name }}
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        
+    </div> 
+</body>
+
+<script>
+    function updateClock() {
+        var now = new Date();
+        var date = now.toLocaleDateString();
+        var hours = now.getHours();
+        var minutes = now.getMinutes();
+        var seconds = now.getSeconds();
+
+        // Add leading zero to minutes and seconds if necessary
+        minutes = minutes < 10 ? '0' + minutes : minutes;
+        seconds = seconds < 10 ? '0' + seconds : seconds;
+
+        // Format: HH:MM:SS
+        var timeString = date + " " + hours + ':' + minutes + ':' + seconds;
+
+        document.getElementById('clock').textContent = timeString;
+    }
+
+    setInterval(updateClock, 1000); // Update clock every second
+    updateClock(); // Initial call
+</script>
+</html>

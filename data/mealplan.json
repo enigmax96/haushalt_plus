@@ -1,0 +1,12 @@
+[
+    {
+        "id": 1,
+        "name": "nudeln",
+        "day": "Montag"
+    },
+    {
+        "id": 2,
+        "name": "pizza",
+        "day": "Dienstag"
+    }
+]
