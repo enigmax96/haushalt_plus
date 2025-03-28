@@ -21,11 +21,20 @@ h1, h2 {
 }
 
 /* Widgets */
-.weather-widget, .meal-plan-widget {
+.meal-plan-widget {
     background-color: #ffd700; /* Gold */
     color: #333;
     padding: 15px;
     border-radius: 10px;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+}
+
+.weather-widget {
+    background-color: #ffd700; /* Gold */
+    color: #333;
+    padding: 15px;
+    border-radius: 10px;
+    text-align-last: center;
     box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
 }
 
@@ -45,6 +54,10 @@ h1, h2 {
     border-radius: 10px;
     text-align-last: center;
     box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+}
+
+.trash-list {
+    
 }
 
 /* Links */

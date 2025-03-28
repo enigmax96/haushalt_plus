@@ -15,16 +15,7 @@
 
     <div class="grid">
 
-        <div class="trash-widget">
-            <h2>Müllabfuhr</h2>
-            <p id="trash-status">{{ trash_status }}</p>
-        </div>
 
-
-        <div class="clock-widget">
-            <h2>Uhrzeit</h2>
-            <p id="clock"></p>
-        </div>
         <div class="weather-widget">
             <h2>Wetter</h2>
             {% if weather %}
@@ -33,6 +24,23 @@
                 <p>{{ weather.description.capitalize() }}</p>
             {% else %}
                 <p>Unable to fetch weather data.</p>
+            {% endif %}
+        </div>
+
+        <div class="clock-widget">
+            <h2>Uhrzeit</h2>
+            <p id="clock"></p>
+        </div>
+        <div class="trash-widget">
+            <h2>Müllabfuhr</h2>
+            {% if trash_data %}
+                <ul>
+                    {% for date, color in trash_data.items() %}
+                        <li class="trash-list">{{ date }} – {{ color }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>Keine bevorstehende Müllabfuhr.</p>
             {% endif %}
         </div>
 
@@ -134,6 +142,12 @@
 </body>
 
 <script>
+
+    setInterval(function() {
+        location.reload(); // Reload the page every hour
+    }, 3600000); 
+
+
     function updateClock() {
         var now = new Date();
         var date = now.toLocaleDateString();
@@ -143,15 +157,13 @@
 
         // Add leading zero to minutes and seconds if necessary
         minutes = minutes < 10 ? '0' + minutes : minutes;
-        seconds = seconds < 10 ? '0' + seconds : seconds;
 
-        // Format: HH:MM:SS
         var timeString = date + " " + hours + ':' + minutes + ':' + seconds;
 
         document.getElementById('clock').textContent = timeString;
     }
 
     setInterval(updateClock, 1000); // Update clock every second
-    updateClock(); // Initial call
+    updateClock(); 
 </script>
 </html>

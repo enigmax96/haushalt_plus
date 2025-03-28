@@ -51,9 +51,14 @@ def get_weather():
 @main.route('/')
 def home():
     weather = get_weather()
-    trash_status = load_data(TRASH_FILE).get('status', 'No trash tomorrow')
     meals = load_data(MEALPLAN_FILE)
-    return render_template('index.html', trash_status=trash_status, weather=weather, meals=meals)
+    try:
+        with open(TRASH_FILE, 'r') as f:
+            trash_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        trash_data = {}
+
+    return render_template('index.html', trash_data=trash_data, weather=weather, meals=meals)
 
 ########################################### GROCERY ROUTES ###########################################
 @main.route('/grocery', methods=['GET', 'POST'])
