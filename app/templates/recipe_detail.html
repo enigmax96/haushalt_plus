@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ recipe.name }} – Haushalt+</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.35s ease both; }
+    </style>
+</head>
+<body class="bg-amber-50 min-h-screen pb-24">
+
+    {% set cat_emoji = {
+        'Pasta': '🍝', 'Suppe': '🍲', 'Backen': '🥐',
+        'Vegetarisch': '🥗', 'Kalorienarm': '🥙', 'Reisgericht': '🍚',
+        'Hauptgericht': '🍽️', 'Dessert': '🍮', 'Sonstige': '🥘',
+        'Snacks': '🥨', 'Frühstück': '🥞'
+    } %}
+
+    <!-- Hero-Bild -->
+    {% if recipe.image %}
+    <div class="relative h-56 w-full">
+        <img src="{{ url_for('static', filename=recipe.image) }}"
+             alt="{{ recipe.name }}"
+             class="w-full h-full object-cover">
+        <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+        <a href="/recipes"
+           class="absolute top-4 left-4 bg-black/30 backdrop-blur-sm text-white rounded-full p-2">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </a>
+    </div>
+    {% else %}
+    <div class="relative h-40 w-full bg-amber-100 flex items-center justify-center text-7xl">
+        {{ cat_emoji.get(recipe.category, '🍽️') }}
+        <a href="/recipes"
+           class="absolute top-4 left-4 bg-white/70 backdrop-blur-sm text-stone-700 rounded-full p-2">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </a>
+    </div>
+    {% endif %}
+
+    <div class="px-4 max-w-lg mx-auto">
+
+        <!-- Titel & Meta -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm -mt-4 relative fade-in">
+            <h1 class="text-xl font-bold text-stone-800">{{ recipe.name }}</h1>
+            <div class="flex flex-wrap gap-2 mt-2">
+                {% if recipe.category %}
+                <span class="text-xs bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full font-medium">{{ recipe.category }}</span>
+                {% endif %}
+                {% if recipe.prep_time %}
+                <span class="text-xs bg-stone-100 text-stone-600 px-2.5 py-1 rounded-full">⏱ {{ recipe.prep_time }} min</span>
+                {% endif %}
+                {% if recipe.servings %}
+                <span class="text-xs bg-stone-100 text-stone-600 px-2.5 py-1 rounded-full">👤 {{ recipe.servings }} Portionen</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Aktionsbuttons -->
+        <div class="grid grid-cols-2 gap-3 mt-3 fade-in">
+            <button
+                id="btn-mealplan"
+                onclick="addToMealplan({{ recipe.id }})"
+                class="bg-amber-800 text-white rounded-xl py-3 text-sm font-semibold active:scale-95 transition-transform text-center"
+            >
+                📅 Zum Wochenplan
+            </button>
+            <button
+                id="btn-grocery"
+                onclick="addToGrocery({{ recipe.id }})"
+                class="bg-white border border-stone-200 text-stone-700 rounded-xl py-3 text-sm font-semibold active:scale-95 transition-transform text-center"
+            >
+                🛒 Alle einkaufen
+            </button>
+        </div>
+
+        <!-- Zutaten -->
+        {% if recipe.ingredients %}
+        <div class="bg-white rounded-2xl p-4 shadow-sm mt-3 fade-in">
+            <h2 class="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-3">Zutaten</h2>
+            <ul class="space-y-2">
+                {% for ing in recipe.ingredients %}
+                <li class="flex items-baseline gap-3 text-sm">
+                    <span class="text-stone-400 min-w-[4rem] text-right flex-shrink-0">{{ ing.amount }}</span>
+                    <span class="text-stone-700">{{ ing.name }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Zubereitung -->
+        {% if recipe.steps %}
+        <div class="bg-white rounded-2xl p-4 shadow-sm mt-3 fade-in">
+            <h2 class="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-3">Zubereitung</h2>
+            <ol class="space-y-3">
+                {% for step in recipe.steps %}
+                <li class="flex gap-3 text-sm">
+                    <span class="flex-shrink-0 w-6 h-6 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center text-xs font-bold">{{ loop.index }}</span>
+                    <span class="text-stone-700 leading-relaxed">{{ step }}</span>
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+
+        <!-- Löschen -->
+        <form action="/recipes/delete/{{ recipe.id }}" method="post" onsubmit="return confirm('Rezept wirklich löschen?')">
+            <button type="submit" class="mt-5 w-full py-3 text-sm text-stone-300 hover:text-red-400 transition-colors">
+                Rezept löschen
+            </button>
+        </form>
+
+    </div>
+
+    <!-- Feedback-Toast -->
+    <div id="toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 bg-stone-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg z-50 transition-all">
+        ✓ <span id="toast-msg"></span>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-stone-900 flex justify-around items-center py-3 z-50">
+        <a href="/" class="flex flex-col items-center gap-0.5 text-stone-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1V10"/>
+            </svg>
+            <span class="text-xs">Start</span>
+        </a>
+        <a href="/grocery" class="flex flex-col items-center gap-0.5 text-stone-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            <span class="text-xs">Einkaufen</span>
+        </a>
+        <a href="/mealplan" class="flex flex-col items-center gap-0.5 text-stone-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span class="text-xs">Wochenplan</span>
+        </a>
+        <a href="/recipes" class="flex flex-col items-center gap-0.5 text-amber-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+            <span class="text-xs">Rezepte</span>
+        </a>
+    </nav>
+
+    <script>
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 2500);
+        }
+
+        function addToMealplan(id) {
+            const btn = document.getElementById('btn-mealplan');
+            btn.disabled = true;
+            fetch(`/recipes/${id}/add_to_mealplan`, { method: 'POST' })
+                .then(r => r.json())
+                .then(d => {
+                    showToast(`Zum Wochenplan hinzugefügt (${d.day})`);
+                    btn.disabled = false;
+                });
+        }
+
+        function addToGrocery(id) {
+            const btn = document.getElementById('btn-grocery');
+            btn.disabled = true;
+            fetch(`/recipes/${id}/add_to_grocery`, { method: 'POST' })
+                .then(r => r.json())
+                .then(d => {
+                    showToast(`${d.count} Zutaten zur Einkaufsliste hinzugefügt`);
+                    btn.disabled = false;
+                });
+        }
+    </script>
+</body>
+</html>

@@ -23,16 +23,22 @@
 
     <div class="px-4 pt-4 max-w-lg mx-auto">
 
-        <!-- Eingabe -->
+        <!-- Eingabe mit Autocomplete -->
         <form action="/mealplan" method="post" class="flex gap-2 mb-4 fade-in">
-            <input
-                type="text"
-                name="meal"
-                placeholder="Gericht hinzufügen…"
-                required
-                autocomplete="off"
-                class="flex-1 px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-base"
-            >
+            <div class="flex-1 relative">
+                <input
+                    type="text"
+                    name="meal"
+                    id="meal-input"
+                    placeholder="Gericht hinzufügen…"
+                    required
+                    autocomplete="off"
+                    class="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-base"
+                >
+                <ul id="suggestions"
+                    class="hidden absolute z-10 left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-stone-100 overflow-hidden">
+                </ul>
+            </div>
             <button
                 type="submit"
                 class="bg-amber-800 text-white px-5 py-3 rounded-xl font-bold text-xl active:scale-95 transition-transform"
@@ -98,23 +104,29 @@
 
     <!-- Bottom Navigation -->
     <nav class="fixed bottom-0 left-0 right-0 bg-stone-900 flex justify-around items-center py-3 z-50">
-        <a href="/" class="flex flex-col items-center gap-1 text-stone-400">
+        <a href="/" class="flex flex-col items-center gap-0.5 text-stone-400">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1V10"/>
             </svg>
             <span class="text-xs">Start</span>
         </a>
-        <a href="/grocery" class="flex flex-col items-center gap-1 text-stone-400">
+        <a href="/grocery" class="flex flex-col items-center gap-0.5 text-stone-400">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
             </svg>
             <span class="text-xs">Einkaufen</span>
         </a>
-        <a href="/mealplan" class="flex flex-col items-center gap-1 text-amber-400">
+        <a href="/mealplan" class="flex flex-col items-center gap-0.5 text-amber-400">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
             <span class="text-xs">Wochenplan</span>
+        </a>
+        <a href="/recipes" class="flex flex-col items-center gap-0.5 text-stone-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+            <span class="text-xs">Rezepte</span>
         </a>
     </nav>
 
@@ -128,6 +140,43 @@
             fetch('/mealplan/delete_all', { method: 'POST' })
                 .then(() => window.location.reload());
         }
+
+        // Autocomplete
+        const mealInput   = document.getElementById('meal-input');
+        const suggestions = document.getElementById('suggestions');
+        let timer;
+
+        mealInput.addEventListener('input', function () {
+            clearTimeout(timer);
+            const q = this.value.trim();
+            if (q.length < 2) { suggestions.classList.add('hidden'); return; }
+            timer = setTimeout(() => {
+                fetch(`/recipes/search?q=${encodeURIComponent(q)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.length) { suggestions.classList.add('hidden'); return; }
+                        suggestions.innerHTML = data.map(r =>
+                            `<li class="px-4 py-2.5 text-sm text-stone-700 hover:bg-amber-50 active:bg-amber-100 cursor-pointer flex items-center justify-between"
+                                 onclick="pickSuggestion('${r.name.replace(/'/g, "\\'")}')">
+                                <span>${r.name}</span>
+                                <span class="text-xs text-amber-600 ml-3 flex-shrink-0">${r.category}</span>
+                            </li>`
+                        ).join('');
+                        suggestions.classList.remove('hidden');
+                    });
+            }, 220);
+        });
+
+        function pickSuggestion(name) {
+            mealInput.value = name;
+            suggestions.classList.add('hidden');
+            mealInput.focus();
+        }
+
+        document.addEventListener('click', e => {
+            if (!mealInput.contains(e.target) && !suggestions.contains(e.target))
+                suggestions.classList.add('hidden');
+        });
     </script>
 </body>
 </html>

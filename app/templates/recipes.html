@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rezepte – Haushalt+</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.35s ease both; }
+        .chips { scrollbar-width: none; }
+        .chips::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="bg-amber-50 min-h-screen pb-24">
+
+    <!-- Header -->
+    <div class="bg-amber-800 text-white px-5 pt-8 pb-4">
+        <h1 class="text-xl font-semibold text-amber-200">Haushalt+</h1>
+        <p class="text-3xl font-bold mt-1">Rezepte</p>
+
+        <!-- Suche -->
+        <form action="/recipes" method="get" class="mt-3 flex gap-2">
+            <input
+                type="text"
+                name="q"
+                value="{{ q }}"
+                placeholder="Rezept suchen…"
+                autocomplete="off"
+                class="flex-1 px-4 py-2 rounded-xl bg-amber-700 text-white placeholder-amber-300 focus:outline-none focus:bg-amber-600 text-sm"
+            >
+            {% if cat %}<input type="hidden" name="cat" value="{{ cat }}">{% endif %}
+            <button type="submit" class="bg-amber-600 px-4 py-2 rounded-xl text-sm font-semibold active:scale-95 transition-transform">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+                </svg>
+            </button>
+        </form>
+    </div>
+
+    <!-- Kategorie-Chips -->
+    <div class="chips flex gap-2 overflow-x-auto px-4 py-3">
+        <a href="/recipes{% if q %}?q={{ q }}{% endif %}"
+           class="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors
+                  {{ 'bg-amber-800 text-white' if not cat else 'bg-white text-stone-600 border border-stone-200' }}">
+            Alle
+        </a>
+        {% for category in categories %}
+        <a href="/recipes?cat={{ category }}{% if q %}&q={{ q }}{% endif %}"
+           class="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors
+                  {{ 'bg-amber-800 text-white' if cat == category else 'bg-white text-stone-600 border border-stone-200' }}">
+            {{ category }}
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Zutaten-Suche -->
+    <form action="/recipes" method="get" class="px-4 mb-3 flex gap-2">
+        <input
+            type="text"
+            name="ingredient"
+            value="{{ ingredient }}"
+            placeholder="Nach Zutat suchen…"
+            autocomplete="off"
+            class="flex-1 px-4 py-2.5 rounded-xl border border-stone-200 bg-white text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm"
+        >
+        {% if cat %}<input type="hidden" name="cat" value="{{ cat }}">{% endif %}
+        <button type="submit" class="bg-white border border-stone-200 px-4 py-2 rounded-xl text-stone-500 text-sm active:scale-95 transition-transform">
+            🥕
+        </button>
+    </form>
+
+    <!-- Rezept-Grid -->
+    <div class="px-4 max-w-lg mx-auto">
+        {% if recipes %}
+        <div class="grid grid-cols-2 gap-3 fade-in">
+            {% set cat_emoji = {
+                'Pasta': '🍝', 'Suppe': '🍲', 'Backen': '🥐',
+                'Vegetarisch': '🥗', 'Kalorienarm': '🥙', 'Reisgericht': '🍚',
+                'Hauptgericht': '🍽️', 'Dessert': '🍮', 'Sonstige': '🥘',
+                'Snacks': '🥨', 'Frühstück': '🥞'
+            } %}
+            {% for recipe in recipes %}
+            <a href="/recipes/{{ recipe.id }}" class="block bg-white rounded-2xl overflow-hidden shadow-sm active:scale-95 transition-transform">
+                {% if recipe.image %}
+                <img src="{{ url_for('static', filename=recipe.image) }}"
+                     alt="{{ recipe.name }}"
+                     class="w-full h-32 object-cover">
+                {% else %}
+                <div class="w-full h-32 bg-amber-100 flex items-center justify-center text-5xl">
+                    {{ cat_emoji.get(recipe.category, '🍽️') }}
+                </div>
+                {% endif %}
+                <div class="p-3">
+                    <p class="text-stone-800 font-semibold text-sm leading-tight">{{ recipe.name }}</p>
+                    <div class="flex items-center gap-2 mt-1.5">
+                        <span class="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">{{ recipe.category }}</span>
+                        {% if recipe.prep_time %}
+                        <span class="text-xs text-stone-400">{{ recipe.prep_time }} min</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-16 text-stone-400 fade-in">
+            <p class="text-4xl mb-3">🍽️</p>
+            <p class="font-medium">Keine Rezepte gefunden</p>
+            <p class="text-sm mt-1">Füge dein erstes Rezept hinzu!</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- FAB: Rezept hinzufügen -->
+    <a href="/recipes/add"
+       class="fixed right-5 bottom-20 bg-amber-800 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg text-2xl font-bold active:scale-95 transition-transform z-40">
+        +
+    </a>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-stone-900 flex justify-around items-center py-3 z-50">
+        <a href="/" class="flex flex-col items-center gap-0.5 text-stone-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1V10"/>
+            </svg>
+            <span class="text-xs">Start</span>
+        </a>
+        <a href="/grocery" class="flex flex-col items-center gap-0.5 text-stone-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            <span class="text-xs">Einkaufen</span>
+        </a>
+        <a href="/mealplan" class="flex flex-col items-center gap-0.5 text-stone-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span class="text-xs">Wochenplan</span>
+        </a>
+        <a href="/recipes" class="flex flex-col items-center gap-0.5 text-amber-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+            <span class="text-xs">Rezepte</span>
+        </a>
+    </nav>
+
+</body>
+</html>

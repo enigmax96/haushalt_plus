@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rezept hinzufügen – Haushalt+</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.3s ease both; }
+    </style>
+</head>
+<body class="bg-amber-50 min-h-screen pb-24">
+
+    <!-- Header -->
+    <div class="bg-amber-800 text-white px-5 pt-8 pb-5 flex items-center gap-3">
+        <a href="/recipes" class="text-amber-200">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </a>
+        <div>
+            <h1 class="text-xl font-semibold text-amber-200">Haushalt+</h1>
+            <p class="text-2xl font-bold">Neues Rezept</p>
+        </div>
+    </div>
+
+    <form action="/recipes/add" method="post" enctype="multipart/form-data" class="px-4 pt-4 max-w-lg mx-auto space-y-4">
+
+        <!-- Name -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm fade-in">
+            <label class="text-xs font-semibold text-amber-700 uppercase tracking-wide">Rezeptname *</label>
+            <input
+                type="text"
+                name="name"
+                required
+                placeholder="z.B. Spaghetti Bolognese"
+                class="mt-2 w-full px-3 py-2.5 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-base"
+            >
+        </div>
+
+        <!-- Kategorie + Metadaten -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm fade-in space-y-3">
+            <div>
+                <label class="text-xs font-semibold text-amber-700 uppercase tracking-wide">Kategorie</label>
+                <select
+                    name="category"
+                    id="category-select"
+                    onchange="toggleCustomCategory(this)"
+                    class="mt-2 w-full px-3 py-2.5 rounded-xl border border-stone-200 text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm bg-white"
+                >
+                    <option value="">– Wählen –</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
+                    <option value="__custom__">+ Neue Kategorie…</option>
+                </select>
+                <input
+                    type="text"
+                    name="category_custom"
+                    id="category-custom"
+                    placeholder="Kategoriename eingeben"
+                    class="hidden mt-2 w-full px-3 py-2.5 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm"
+                >
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-xs font-semibold text-amber-700 uppercase tracking-wide">Zubereitungszeit</label>
+                    <div class="flex items-center gap-2 mt-2">
+                        <input
+                            type="number"
+                            name="prep_time"
+                            placeholder="30"
+                            min="1"
+                            class="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm"
+                        >
+                        <span class="text-stone-400 text-sm flex-shrink-0">min</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-amber-700 uppercase tracking-wide">Portionen</label>
+                    <input
+                        type="number"
+                        name="servings"
+                        placeholder="4"
+                        min="1"
+                        class="mt-2 w-full px-3 py-2.5 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm"
+                    >
+                </div>
+            </div>
+        </div>
+
+        <!-- Bild -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm fade-in">
+            <label class="text-xs font-semibold text-amber-700 uppercase tracking-wide">Foto</label>
+            <div class="mt-2">
+                <label for="image-input" class="block w-full border-2 border-dashed border-stone-200 rounded-xl p-6 text-center cursor-pointer hover:border-amber-400 transition-colors">
+                    <img id="preview" src="" alt="" class="hidden w-full h-40 object-cover rounded-lg mb-3">
+                    <span id="upload-label" class="text-stone-400 text-sm">📷 Foto auswählen</span>
+                </label>
+                <input type="file" name="image" id="image-input" accept="image/*" class="hidden" onchange="previewImage(this)">
+            </div>
+        </div>
+
+        <!-- Zutaten -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm fade-in">
+            <div class="flex items-center justify-between mb-3">
+                <label class="text-xs font-semibold text-amber-700 uppercase tracking-wide">Zutaten</label>
+                <button type="button" onclick="addIngredient()" class="text-amber-700 text-sm font-semibold">+ Zeile</button>
+            </div>
+            <div id="ingredients" class="space-y-2">
+                <!-- 3 Startzeilen -->
+                <div class="ingredient-row flex gap-2 items-center">
+                    <input type="text" name="ingredient_amount" placeholder="Menge" class="w-24 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
+                    <input type="text" name="ingredient_name"   placeholder="Zutat"  class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
+                    <button type="button" onclick="removeRow(this)" class="text-stone-300 hover:text-red-400 p-1 flex-shrink-0">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="ingredient-row flex gap-2 items-center">
+                    <input type="text" name="ingredient_amount" placeholder="Menge" class="w-24 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
+                    <input type="text" name="ingredient_name"   placeholder="Zutat"  class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
+                    <button type="button" onclick="removeRow(this)" class="text-stone-300 hover:text-red-400 p-1 flex-shrink-0">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="ingredient-row flex gap-2 items-center">
+                    <input type="text" name="ingredient_amount" placeholder="Menge" class="w-24 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
+                    <input type="text" name="ingredient_name"   placeholder="Zutat"  class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
+                    <button type="button" onclick="removeRow(this)" class="text-stone-300 hover:text-red-400 p-1 flex-shrink-0">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zubereitungsschritte -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm fade-in">
+            <div class="flex items-center justify-between mb-3">
+                <label class="text-xs font-semibold text-amber-700 uppercase tracking-wide">Zubereitung</label>
+                <button type="button" onclick="addStep()" class="text-amber-700 text-sm font-semibold">+ Schritt</button>
+            </div>
+            <div id="steps" class="space-y-2">
+                <div class="step-row flex gap-2 items-start">
+                    <span class="step-num flex-shrink-0 w-6 h-6 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center text-xs font-bold mt-2">1</span>
+                    <textarea name="step" rows="2" placeholder="Schritt beschreiben…" class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm resize-none"></textarea>
+                    <button type="button" onclick="removeRow(this)" class="text-stone-300 hover:text-red-400 p-1 flex-shrink-0 mt-2">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="step-row flex gap-2 items-start">
+                    <span class="step-num flex-shrink-0 w-6 h-6 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center text-xs font-bold mt-2">2</span>
+                    <textarea name="step" rows="2" placeholder="Schritt beschreiben…" class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm resize-none"></textarea>
+                    <button type="button" onclick="removeRow(this)" class="text-stone-300 hover:text-red-400 p-1 flex-shrink-0 mt-2">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Speichern -->
+        <button
+            type="submit"
+            class="w-full bg-amber-800 text-white py-4 rounded-2xl font-bold text-base active:scale-95 transition-transform shadow-sm"
+        >
+            Rezept speichern
+        </button>
+
+    </form>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-stone-900 flex justify-around items-center py-3 z-50">
+        <a href="/" class="flex flex-col items-center gap-0.5 text-stone-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1V10"/>
+            </svg>
+            <span class="text-xs">Start</span>
+        </a>
+        <a href="/grocery" class="flex flex-col items-center gap-0.5 text-stone-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            <span class="text-xs">Einkaufen</span>
+        </a>
+        <a href="/mealplan" class="flex flex-col items-center gap-0.5 text-stone-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span class="text-xs">Wochenplan</span>
+        </a>
+        <a href="/recipes" class="flex flex-col items-center gap-0.5 text-amber-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+            <span class="text-xs">Rezepte</span>
+        </a>
+    </nav>
+
+    <script>
+        function toggleCustomCategory(sel) {
+            const custom = document.getElementById('category-custom');
+            if (sel.value === '__custom__') {
+                custom.classList.remove('hidden');
+                custom.required = true;
+            } else {
+                custom.classList.add('hidden');
+                custom.required = false;
+            }
+        }
+
+        function previewImage(input) {
+            if (!input.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = document.getElementById('preview');
+                img.src = e.target.result;
+                img.classList.remove('hidden');
+                document.getElementById('upload-label').textContent = '📷 Foto ändern';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+
+        function ingredientRowHtml() {
+            return `<div class="ingredient-row flex gap-2 items-center">
+                <input type="text" name="ingredient_amount" placeholder="Menge" class="w-24 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
+                <input type="text" name="ingredient_name" placeholder="Zutat" class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
+                <button type="button" onclick="removeRow(this)" class="text-stone-300 hover:text-red-400 p-1 flex-shrink-0">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>`;
+        }
+
+        function addIngredient() {
+            document.getElementById('ingredients').insertAdjacentHTML('beforeend', ingredientRowHtml());
+        }
+
+        function addStep() {
+            const steps = document.getElementById('steps');
+            const num = steps.querySelectorAll('.step-row').length + 1;
+            steps.insertAdjacentHTML('beforeend', `
+                <div class="step-row flex gap-2 items-start">
+                    <span class="step-num flex-shrink-0 w-6 h-6 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center text-xs font-bold mt-2">${num}</span>
+                    <textarea name="step" rows="2" placeholder="Schritt beschreiben…" class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm resize-none"></textarea>
+                    <button type="button" onclick="removeRow(this)" class="text-stone-300 hover:text-red-400 p-1 flex-shrink-0 mt-2">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>`);
+        }
+
+        function removeRow(btn) {
+            btn.closest('[class*="-row"]').remove();
+            // Schritt-Nummern neu zählen
+            document.querySelectorAll('#steps .step-num').forEach((el, i) => el.textContent = i + 1);
+        }
+    </script>
+</body>
+</html>

@@ -202,3 +202,138 @@ def delete_meal(meal_id):
 def delete_all_meals():
     save_data(MEALPLAN_FILE, [])
     return '', 204
+
+########################################### RECIPE ROUTES ###########################################
+RECIPES_FILE   = os.path.join(os.path.dirname(__file__), '../data/recipes.json')
+CATEGORIES_FILE = os.path.join(os.path.dirname(__file__), '../data/categories.json')
+UPLOAD_FOLDER  = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
+
+_DEFAULT_CATEGORIES = [
+    'Pasta', 'Suppe', 'Backen', 'Vegetarisch', 'Kalorienarm',
+    'Reisgericht', 'Hauptgericht', 'Dessert', 'Sonstige', 'Snacks', 'Frühstück',
+]
+
+def load_categories():
+    try:
+        with open(CATEGORIES_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return _DEFAULT_CATEGORIES
+
+@main.route('/recipes')
+def recipes():
+    all_recipes = load_data(RECIPES_FILE)
+    categories  = load_categories()
+    q          = request.args.get('q', '').lower().strip()
+    cat        = request.args.get('cat', '')
+    ingredient = request.args.get('ingredient', '').lower().strip()
+
+    filtered = all_recipes
+    if q:
+        filtered = [r for r in filtered if q in r['name'].lower()]
+    if cat:
+        filtered = [r for r in filtered if r.get('category') == cat]
+    if ingredient:
+        filtered = [r for r in filtered if any(
+            ingredient in i['name'].lower() for i in r.get('ingredients', [])
+        )]
+
+    return render_template('recipes.html', recipes=filtered, categories=categories,
+                           q=q, cat=cat, ingredient=ingredient)
+
+@main.route('/recipes/<int:recipe_id>')
+def recipe_detail(recipe_id):
+    recipe = next((r for r in load_data(RECIPES_FILE) if r['id'] == recipe_id), None)
+    if not recipe:
+        return redirect(url_for('main.recipes'))
+    return render_template('recipe_detail.html', recipe=recipe)
+
+@main.route('/recipes/add', methods=['GET', 'POST'])
+def recipe_add():
+    categories = load_categories()
+    if request.method == 'POST':
+        all_recipes = load_data(RECIPES_FILE)
+        new_id = max((r['id'] for r in all_recipes), default=0) + 1
+
+        image_path = None
+        if 'image' in request.files:
+            file = request.files['image']
+            if file and file.filename:
+                from werkzeug.utils import secure_filename
+                ext = os.path.splitext(secure_filename(file.filename))[1].lower()
+                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+                file.save(os.path.join(UPLOAD_FOLDER, f"{new_id}{ext}"))
+                image_path = f"uploads/{new_id}{ext}"
+
+        amounts = request.form.getlist('ingredient_amount')
+        names   = request.form.getlist('ingredient_name')
+        ingredients = [
+            {'amount': a.strip(), 'name': n.strip()}
+            for a, n in zip(amounts, names) if n.strip()
+        ]
+        steps = [s.strip() for s in request.form.getlist('step') if s.strip()]
+
+        category = request.form.get('category', '')
+        if category == '__custom__':
+            category = request.form.get('category_custom', 'Sonstige').strip()
+
+        all_recipes.append({
+            'id':        new_id,
+            'name':      request.form.get('name', '').strip(),
+            'category':  category,
+            'prep_time': request.form.get('prep_time', ''),
+            'servings':  request.form.get('servings', ''),
+            'image':     image_path,
+            'ingredients': ingredients,
+            'steps':     steps,
+        })
+        save_data(RECIPES_FILE, all_recipes)
+        return redirect(url_for('main.recipe_detail', recipe_id=new_id))
+
+    return render_template('recipe_add.html', categories=categories)
+
+@main.route('/recipes/delete/<int:recipe_id>', methods=['POST'])
+def recipe_delete(recipe_id):
+    all_recipes = load_data(RECIPES_FILE)
+    recipe = next((r for r in all_recipes if r['id'] == recipe_id), None)
+    if recipe and recipe.get('image'):
+        img = os.path.join(UPLOAD_FOLDER, os.path.basename(recipe['image']))
+        if os.path.exists(img):
+            os.remove(img)
+    save_data(RECIPES_FILE, [r for r in all_recipes if r['id'] != recipe_id])
+    return redirect(url_for('main.recipes'))
+
+@main.route('/recipes/search')
+def recipe_search():
+    q = request.args.get('q', '').lower().strip()
+    matches = [
+        {'id': r['id'], 'name': r['name'], 'category': r.get('category', '')}
+        for r in load_data(RECIPES_FILE)
+        if q and q in r['name'].lower()
+    ][:8]
+    return jsonify(matches)
+
+@main.route('/recipes/<int:recipe_id>/add_to_mealplan', methods=['POST'])
+def recipe_add_to_mealplan(recipe_id):
+    recipe = next((r for r in load_data(RECIPES_FILE) if r['id'] == recipe_id), None)
+    if not recipe:
+        return jsonify({'status': 'not found'}), 404
+    meals = load_data(MEALPLAN_FILE)
+    days  = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
+    day   = next((d for d in days if not any(m.get('day') == d for m in meals)), 'Sonstige')
+    meals.append({'id': max((m['id'] for m in meals), default=0) + 1, 'name': recipe['name'], 'day': day})
+    save_data(MEALPLAN_FILE, meals)
+    return jsonify({'status': 'added', 'day': day})
+
+@main.route('/recipes/<int:recipe_id>/add_to_grocery', methods=['POST'])
+def recipe_add_to_grocery(recipe_id):
+    recipe = next((r for r in load_data(RECIPES_FILE) if r['id'] == recipe_id), None)
+    if not recipe:
+        return jsonify({'status': 'not found'}), 404
+    grocery  = load_data(GROCERY_FILE)
+    next_id  = max((i['id'] for i in grocery), default=0) + 1
+    for ing in recipe.get('ingredients', []):
+        grocery.append({'id': next_id, 'name': f"{ing['amount']} {ing['name']}".strip()})
+        next_id += 1
+    save_data(GROCERY_FILE, grocery)
+    return jsonify({'status': 'added', 'count': len(recipe.get('ingredients', []))})
