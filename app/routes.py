@@ -4,11 +4,7 @@ Handles routes, json reading/writing and weather api
 import json
 import os
 import requests
-from datetime import datetime
 from flask import Blueprint, request, redirect, url_for, jsonify, render_template
-from dotenv import load_dotenv
-
-load_dotenv()
 
 main = Blueprint('main', __name__)
 
@@ -28,25 +24,52 @@ def save_data(file, data):
     with open(file, 'w') as f:
         json.dump(data, f, indent=4)
 
-########################################### MAIN ROUTE NAD WEATHER ###########################################
+########################################### WEATHER (Open-Meteo, kein API-Key nötig) ###########################################
+_WMO_CODES = {
+    0:  ("Klar",                   "☀️"),
+    1:  ("Überwiegend klar",       "🌤️"),
+    2:  ("Teilweise bewölkt",      "⛅"),
+    3:  ("Bewölkt",                "☁️"),
+    45: ("Nebel",                  "🌫️"),
+    48: ("Gefrierender Nebel",     "🌫️"),
+    51: ("Leichter Nieselregen",   "🌦️"),
+    53: ("Nieselregen",            "🌦️"),
+    55: ("Starker Nieselregen",    "🌧️"),
+    61: ("Leichter Regen",         "🌧️"),
+    63: ("Regen",                  "🌧️"),
+    65: ("Starker Regen",          "🌧️"),
+    71: ("Leichter Schneefall",    "🌨️"),
+    73: ("Schneefall",             "❄️"),
+    75: ("Starker Schneefall",     "❄️"),
+    80: ("Leichte Schauer",        "🌦️"),
+    81: ("Schauer",                "🌧️"),
+    82: ("Starke Schauer",         "⛈️"),
+    95: ("Gewitter",               "⛈️"),
+    96: ("Gewitter mit Hagel",     "⛈️"),
+    99: ("Gewitter m. star. Hagel","⛈️"),
+}
+
 def get_weather():
-
-    api_key = os.getenv('API_KEY')
-    city = 'Gelsenkirchen'
-    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
-    
-    response = requests.get(url)
-    data = response.json()
-
-    if data['cod'] == 200:
-        weather = {
-            "temperature": data['main']['temp'],
-            "description": data['weather'][0]['description'],
-            "city": city,
-            "date": datetime.now().strftime('%Y-%m-%d')
+    url = (
+        "https://api.open-meteo.com/v1/forecast"
+        "?latitude=51.5177&longitude=7.0857"
+        "&current=temperature_2m,weather_code"
+        "&timezone=Europe%2FBerlin"
+    )
+    try:
+        data = requests.get(url, timeout=5).json()
+        current = data.get('current', {})
+        code = current.get('weather_code', 0)
+        temp = current.get('temperature_2m')
+        desc, icon = _WMO_CODES.get(code, ("Unbekannt", "❓"))
+        return {
+            "temperature": round(temp, 1) if temp is not None else "?",
+            "description": desc,
+            "icon": icon,
+            "city": "Gelsenkirchen",
         }
-        return weather
-    return None
+    except Exception:
+        return None
 
 @main.route('/')
 def home():

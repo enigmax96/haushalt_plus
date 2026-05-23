@@ -1,38 +1,105 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
-    <title>Einkaufsliste</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Einkaufsliste – Haushalt+</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.3s ease both; }
+
+        @keyframes slideOut {
+            to { opacity: 0; transform: translateX(60px); max-height: 0; padding: 0; margin: 0; }
+        }
+        .slide-out { animation: slideOut 0.22s ease forwards; overflow: hidden; }
+    </style>
 </head>
-<body>
-    
-    <div class="navbar">
-        <a href="/" class="{{ 'active' if request.path == '/' else '' }}">Startseite</a>
-        <a href="/grocery" class="{{ 'active' if request.path == '/grocery' else '' }}">Einkaufsliste</a>
-        <a href="/mealplan" class="{{ 'active' if request.path == '/mealplan' else '' }}">Wochenplan</a>
+<body class="bg-amber-50 min-h-screen pb-24">
+
+    <!-- Header -->
+    <div class="bg-amber-800 text-white px-5 pt-8 pb-6">
+        <h1 class="text-xl font-semibold text-amber-200">Haushalt+</h1>
+        <p class="text-3xl font-bold mt-1">Einkaufsliste</p>
+        <p class="text-amber-300 text-sm mt-1">{{ items|length }} Artikel</p>
     </div>
 
-    <form action="/grocery" method="post">
-        <input type="text" name="item" placeholder="Produkt hinzufügen" required>
-        <button type="submit">Hinzufügen</button>
-    </form>
+    <div class="px-4 pt-4 max-w-lg mx-auto">
 
-    <ul>
-        {% for item in items %}
-            <li>
-                {{ item.name }}
-                <button data-item-id="{{ item.id }}" onclick="deleteItem(this.getAttribute('data-item-id'))">Löschen</button>
+        <!-- Eingabe -->
+        <form action="/grocery" method="post" class="flex gap-2 mb-4 fade-in">
+            <input
+                type="text"
+                name="item"
+                placeholder="Produkt hinzufügen…"
+                required
+                autocomplete="off"
+                class="flex-1 px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-base"
+            >
+            <button
+                type="submit"
+                class="bg-amber-800 text-white px-5 py-3 rounded-xl font-bold text-xl active:scale-95 transition-transform"
+            >+</button>
+        </form>
 
+        <!-- Liste -->
+        <ul id="item-list" class="space-y-2">
+            {% for item in items %}
+            <li id="item-{{ item.id }}" class="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm fade-in">
+                <span class="text-stone-700">{{ item.name }}</span>
+                <button
+                    onclick="deleteItem({{ item.id }})"
+                    class="text-stone-300 hover:text-red-400 active:scale-90 transition-all p-1 ml-3"
+                    aria-label="Löschen"
+                >
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
             </li>
-        {% endfor %}
-    </ul>
+            {% endfor %}
+        </ul>
 
-    <button onclick="deleteAllItems()">Alle löschen</button>
+        {% if items %}
+        <button
+            onclick="deleteAllItems()"
+            class="mt-5 w-full py-3 text-sm text-stone-400 hover:text-red-400 transition-colors"
+        >Alle löschen</button>
+        {% endif %}
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-stone-900 flex justify-around items-center py-3 z-50">
+        <a href="/" class="flex flex-col items-center gap-1 text-stone-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1V10"/>
+            </svg>
+            <span class="text-xs">Start</span>
+        </a>
+        <a href="/grocery" class="flex flex-col items-center gap-1 text-amber-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            <span class="text-xs">Einkaufen</span>
+        </a>
+        <a href="/mealplan" class="flex flex-col items-center gap-1 text-stone-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span class="text-xs">Wochenplan</span>
+        </a>
+    </nav>
 
     <script>
         function deleteItem(id) {
-            fetch(`/grocery/delete/${id}`, { method: 'POST' })
-                .then(() => window.location.reload());
+            const el = document.getElementById(`item-${id}`);
+            el.classList.add('slide-out');
+            setTimeout(() => {
+                fetch(`/grocery/delete/${id}`, { method: 'POST' }).then(() => el.remove());
+            }, 180);
         }
 
         function deleteAllItems() {

@@ -1,48 +1,122 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
-    <title>Wochenplan</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wochenplan – Haushalt+</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.3s ease both; }
+    </style>
 </head>
-<body>
+<body class="bg-amber-50 min-h-screen pb-24">
 
-    <div class="navbar">
-        <a href="/" class="{{ 'active' if request.path == '/' else '' }}">Startseite</a>
-        <a href="/grocery" class="{{ 'active' if request.path == '/grocery' else '' }}">Einkaufsliste</a>
-        <a href="/mealplan" class="{{ 'active' if request.path == '/mealplan' else '' }}">Wochenplan</a>
+    <!-- Header -->
+    <div class="bg-amber-800 text-white px-5 pt-8 pb-6">
+        <h1 class="text-xl font-semibold text-amber-200">Haushalt+</h1>
+        <p class="text-3xl font-bold mt-1">Wochenplan</p>
     </div>
 
-    <form action="/mealplan" method="post">
-        <input type="text" name="meal" placeholder="Gericht hinzufügen" required>
-        <button type="submit">Hinzufügen</button>
-    </form>
+    <div class="px-4 pt-4 max-w-lg mx-auto">
 
-    <div class="meal-days">
-        {% for day in ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'] %}
-            <h2>{{ day }}</h2>
-            <ul>
-                {% for meal in meals_by_day[day] %}
-                    <li>
-                        {{ meal.name }}
-                        <button data-meal-id="{{ meal.id }}" onclick="deleteMeal(this.getAttribute('data-meal-id'))">Löschen</button>
+        <!-- Eingabe -->
+        <form action="/mealplan" method="post" class="flex gap-2 mb-4 fade-in">
+            <input
+                type="text"
+                name="meal"
+                placeholder="Gericht hinzufügen…"
+                required
+                autocomplete="off"
+                class="flex-1 px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-base"
+            >
+            <button
+                type="submit"
+                class="bg-amber-800 text-white px-5 py-3 rounded-xl font-bold text-xl active:scale-95 transition-transform"
+            >+</button>
+        </form>
 
+        <!-- Tage -->
+        <div class="space-y-2">
+            {% for day in ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'] %}
+            <div class="bg-white rounded-xl px-4 py-3 shadow-sm fade-in">
+                <p class="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">{{ day }}</p>
+                {% if meals_by_day[day] %}
+                <ul class="space-y-1">
+                    {% for meal in meals_by_day[day] %}
+                    <li class="flex items-center justify-between">
+                        <span class="text-stone-700 text-sm">{{ meal.name }}</span>
+                        <button
+                            onclick="deleteMeal({{ meal.id }})"
+                            class="text-stone-300 hover:text-red-400 active:scale-90 transition-all p-1 ml-2"
+                            aria-label="Löschen"
+                        >
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
                     </li>
-                {% endfor %}
-            </ul>
-        {% endfor %}
-        
-        <h2>Sonstige</h2>
-        <ul>
-            {% for meal in meals_by_day['Sonstige'] %}
-                <li>
-                    {{ meal.name }}
-                    <button data-meal-id="{{ meal.id }}" onclick="deleteMeal(this.getAttribute('data-meal-id'))">Delete</button>
-                </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-stone-300 text-sm">–</p>
+                {% endif %}
+            </div>
             {% endfor %}
-        </ul>
+
+            {% if meals_by_day['Sonstige'] %}
+            <div class="bg-white rounded-xl px-4 py-3 shadow-sm fade-in">
+                <p class="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">Sonstige</p>
+                <ul class="space-y-1">
+                    {% for meal in meals_by_day['Sonstige'] %}
+                    <li class="flex items-center justify-between">
+                        <span class="text-stone-700 text-sm">{{ meal.name }}</span>
+                        <button
+                            onclick="deleteMeal({{ meal.id }})"
+                            class="text-stone-300 hover:text-red-400 active:scale-90 transition-all p-1 ml-2"
+                            aria-label="Löschen"
+                        >
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+
+        <button
+            onclick="deleteAllMeals()"
+            class="mt-5 w-full py-3 text-sm text-stone-400 hover:text-red-400 transition-colors"
+        >Alle löschen</button>
     </div>
 
-    <button onclick="deleteAllMeals()">Alle löschen</button>
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-stone-900 flex justify-around items-center py-3 z-50">
+        <a href="/" class="flex flex-col items-center gap-1 text-stone-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1V10"/>
+            </svg>
+            <span class="text-xs">Start</span>
+        </a>
+        <a href="/grocery" class="flex flex-col items-center gap-1 text-stone-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            <span class="text-xs">Einkaufen</span>
+        </a>
+        <a href="/mealplan" class="flex flex-col items-center gap-1 text-amber-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span class="text-xs">Wochenplan</span>
+        </a>
+    </nav>
 
     <script>
         function deleteMeal(id) {

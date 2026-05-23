@@ -1,169 +1,124 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
-    <title>Home Dashboard</title>
-    
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Haushalt+</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-1 { animation: fadeIn 0.4s ease 0.00s both; }
+        .fade-2 { animation: fadeIn 0.4s ease 0.08s both; }
+        .fade-3 { animation: fadeIn 0.4s ease 0.16s both; }
+        .fade-4 { animation: fadeIn 0.4s ease 0.24s both; }
+    </style>
 </head>
-<body>
+<body class="bg-amber-50 min-h-screen pb-24">
 
-    <div class="navbar">
-        <a href="/" class="{{ 'active' if request.path == '/' else '' }}">Startseite</a>
-        <a href="/grocery" class="{{ 'active' if request.path == '/grocery' else '' }}">Einkaufsliste</a>
-        <a href="/mealplan" class="{{ 'active' if request.path == '/mealplan' else '' }}">Wochenplan</a>
+    <!-- Header -->
+    <div class="bg-amber-800 text-white px-5 pt-8 pb-6">
+        <h1 class="text-xl font-semibold text-amber-200">Haushalt+</h1>
+        <p id="clock-time" class="text-5xl font-bold tracking-tight mt-1">--:--</p>
+        <p id="clock-date" class="text-amber-300 text-sm mt-1"></p>
     </div>
 
-    <div class="grid">
+    <div class="px-4 pt-4 space-y-3 max-w-lg mx-auto">
 
-
-        <div class="weather-widget">
-            <h2>Wetter</h2>
+        <!-- Wetter -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm fade-1">
             {% if weather %}
-                <p>{{ weather.city }} - {{ weather.date }}</p>
-                <p>Temp: {{ weather.temperature }}°C</p>
-                <p>{{ weather.description.capitalize() }}</p>
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-stone-400 text-xs uppercase tracking-wide">{{ weather.city }}</p>
+                    <p class="text-4xl font-bold text-stone-800 mt-0.5">{{ weather.temperature }}°C</p>
+                    <p class="text-stone-500 text-sm mt-1">{{ weather.description }}</p>
+                </div>
+                <span class="text-6xl leading-none">{{ weather.icon }}</span>
+            </div>
             {% else %}
-                <p>Unable to fetch weather data.</p>
+            <p class="text-stone-400 text-sm">Wetterdaten nicht verfügbar</p>
             {% endif %}
         </div>
 
-        <div class="clock-widget">
-            <h2>Uhrzeit</h2>
-            <p id="clock"></p>
-        </div>
-        <div class="trash-widget">
-            <h2>Müllabfuhr</h2>
+        <!-- Müllabfuhr -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm fade-2">
+            <h2 class="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-3">Müllabfuhr</h2>
             {% if trash_data %}
-                <ul>
-                    {% for date, color in trash_data.items() %}
-                        <li class="trash-list">{{ date }} – {{ color }}</li>
-                    {% endfor %}
-                </ul>
+            <ul class="space-y-2">
+                {% for date, color in trash_data.items() %}
+                <li class="flex items-center gap-3">
+                    <span class="w-2 h-2 rounded-full bg-amber-600 flex-shrink-0"></span>
+                    <span class="text-stone-600 text-sm">{{ date }}</span>
+                    <span class="text-stone-400 text-sm ml-auto">{{ color }}</span>
+                </li>
+                {% endfor %}
+            </ul>
             {% else %}
-                <p>Keine bevorstehende Müllabfuhr.</p>
+            <p class="text-stone-400 text-sm">Keine Termine eingetragen</p>
             {% endif %}
         </div>
 
-        <div class="meal-plan-widget">
-            <h2>Wochenplan</h2>
-            <div class="meal-plan">
-                <div class="meal-entry">
-                    <span class="day">Mo:</span>
-                    <span class="meal">
+        <!-- Wochenplan -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm fade-3">
+            <h2 class="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-3">Diese Woche</h2>
+            <div class="space-y-2">
+                {% set days_short = {'Montag': 'Mo', 'Dienstag': 'Di', 'Mittwoch': 'Mi', 'Donnerstag': 'Do', 'Freitag': 'Fr', 'Samstag': 'Sa', 'Sonntag': 'So'} %}
+                {% for day in ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'] %}
+                <div class="flex items-center gap-3 text-sm">
+                    <span class="w-7 text-amber-700 font-semibold flex-shrink-0">{{ days_short[day] }}</span>
+                    <span class="text-stone-600">
+                        {% set found = [] %}
                         {% for meal in meals %}
-                            {% if meal.day == 'Montag' %}
-                                {{ meal.name }}
-                            {% endif %}
+                            {% if meal.day == day %}{{ meal.name }}{% set _ = found.append(1) %}{% endif %}
                         {% endfor %}
+                        {% if not found %}<span class="text-stone-300">–</span>{% endif %}
                     </span>
                 </div>
-        
-                <div class="meal-entry">
-                    <span class="day">Di:</span>
-                    <span class="meal">
-                        {% for meal in meals %}
-                            {% if meal.day == 'Dienstag' %}
-                                {{ meal.name }}
-                            {% endif %}
-                        {% endfor %}
-                    </span>
-                </div>
-        
-                <div class="meal-entry">
-                    <span class="day">Mi:</span>
-                    <span class="meal">
-                        {% for meal in meals %}
-                            {% if meal.day == 'Mittwoch' %}
-                                {{ meal.name }}
-                            {% endif %}
-                        {% endfor %}
-                    </span>
-                </div>
-        
-                <div class="meal-entry">
-                    <span class="day">Do:</span>
-                    <span class="meal">
-                        {% for meal in meals %}
-                            {% if meal.day == 'Donnerstag' %}
-                                {{ meal.name }}
-                            {% endif %}
-                        {% endfor %}
-                    </span>
-                </div>
-        
-                <div class="meal-entry">
-                    <span class="day">Fr:</span>
-                    <span class="meal">
-                        {% for meal in meals %}
-                            {% if meal.day == 'Freitag' %}
-                                {{ meal.name }}
-                            {% endif %}
-                        {% endfor %}
-                    </span>
-                </div>
-        
-                <div class="meal-entry">
-                    <span class="day">Sa:</span>
-                    <span class="meal">
-                        {% for meal in meals %}
-                            {% if meal.day == 'Samstag' %}
-                                {{ meal.name }}
-                            {% endif %}
-                        {% endfor %}
-                    </span>
-                </div>
-        
-                <div class="meal-entry">
-                    <span class="day">So:</span>
-                    <span class="meal">
-                        {% for meal in meals %}
-                            {% if meal.day == 'Sonntag' %}
-                                {{ meal.name }}
-                            {% endif %}
-                        {% endfor %}
-                    </span>
-                </div>
-        
-                <div class="meal-entry">
-                    <span class="day">Sonstige:</span>
-                    <span class="meal">
-                        {% for meal in meals %}
-                            {% if meal.day == 'Sonstige' %}
-                                {{ meal.name }}
-                            {% endif %}
-                        {% endfor %}
-                    </span>
-                </div>
+                {% endfor %}
             </div>
         </div>
-        
-        
-    </div> 
+
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-stone-900 flex justify-around items-center py-3 z-50">
+        <a href="/" class="flex flex-col items-center gap-1 text-amber-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1V10"/>
+            </svg>
+            <span class="text-xs">Start</span>
+        </a>
+        <a href="/grocery" class="flex flex-col items-center gap-1 text-stone-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            <span class="text-xs">Einkaufen</span>
+        </a>
+        <a href="/mealplan" class="flex flex-col items-center gap-1 text-stone-400">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span class="text-xs">Wochenplan</span>
+        </a>
+    </nav>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            const days   = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+            const months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('clock-time').textContent = `${h}:${m}`;
+            document.getElementById('clock-date').textContent =
+                `${days[now.getDay()]}, ${now.getDate()}. ${months[now.getMonth()]} ${now.getFullYear()}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+        setInterval(() => location.reload(), 3600000);
+    </script>
 </body>
-
-<script>
-
-    setInterval(function() {
-        location.reload(); // Reload the page every hour
-    }, 3600000); 
-
-
-    function updateClock() {
-        var now = new Date();
-        var date = now.toLocaleDateString();
-        var hours = now.getHours();
-        var minutes = now.getMinutes();
-        var seconds = now.getSeconds();
-
-        // Add leading zero to minutes and seconds if necessary
-        minutes = minutes < 10 ? '0' + minutes : minutes;
-
-        var timeString = date + " " + hours + ':' + minutes + ':' + seconds;
-
-        document.getElementById('clock').textContent = timeString;
-    }
-
-    setInterval(updateClock, 1000); // Update clock every second
-    updateClock(); 
-</script>
 </html>
