@@ -91,17 +91,16 @@
                      class="w-full h-32 object-cover">
                 {% else %}
                 <div class="w-full h-32 bg-amber-100 flex items-center justify-center text-5xl">
-                    {{ cat_emoji.get(recipe.category, '🍽️') }}
+                    {{ cat_emoji.get(recipe.category[0] if recipe.category else '', '🍽️') }}
                 </div>
                 {% endif %}
                 <div class="p-3">
                     <p class="text-stone-800 font-semibold text-sm leading-tight">{{ recipe.name }}</p>
                     <div class="flex items-center gap-2 mt-1.5 flex-wrap">
-                        {% set cats = recipe.category if recipe.category is iterable and recipe.category is not string else ([recipe.category] if recipe.category else []) %}
-                        {% if cats %}
-                        <span class="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">{{ cats[0] }}</span>
-                        {% if cats | length > 1 %}
-                        <span class="text-xs text-stone-400">+{{ cats | length - 1 }}</span>
+                        {% if recipe.category %}
+                        <span class="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">{{ recipe.category[0] }}</span>
+                        {% if recipe.category | length > 1 %}
+                        <span class="text-xs text-stone-400">+{{ recipe.category | length - 1 }}</span>
                         {% endif %}
                         {% endif %}
                         {% if recipe.prep_time %}

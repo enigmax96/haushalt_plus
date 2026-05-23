@@ -242,6 +242,7 @@ def recipes():
     cat        = request.args.get('cat', '')
     ingredient = request.args.get('ingredient', '').lower().strip()
 
+    all_recipes = [_normalize_recipe(r) for r in all_recipes]
     filtered = all_recipes
     if q:
         filtered = [r for r in filtered if q in r['name'].lower()]
