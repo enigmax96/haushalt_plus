@@ -64,7 +64,14 @@
 
         <!-- Titel & Meta -->
         <div class="bg-white rounded-2xl p-4 shadow-sm -mt-4 relative fade-in">
-            <h1 class="text-xl font-bold text-stone-800">{{ recipe.name }}</h1>
+            <div class="flex items-start justify-between gap-2">
+                <h1 class="text-xl font-bold text-stone-800">{{ recipe.name }}</h1>
+                <button id="btn-fav" onclick="toggleFavorite({{ recipe.id }})"
+                        class="text-2xl flex-shrink-0 active:scale-90 transition-transform"
+                        aria-label="Favorit">
+                    {{ '⭐' if recipe.favorite else '☆' }}
+                </button>
+            </div>
             <div class="flex flex-wrap gap-2 mt-2">
                 {% for cat in recipe.category %}
                 <span class="text-xs bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full font-medium">{{ cat }}</span>
@@ -74,6 +81,9 @@
                 {% endif %}
                 {% if recipe.servings %}
                 <span class="text-xs bg-stone-100 text-stone-600 px-2.5 py-1 rounded-full">👤 {{ recipe.servings }} Portionen</span>
+                {% endif %}
+                {% if recipe.last_cooked %}
+                <span class="text-xs bg-stone-100 text-stone-500 px-2.5 py-1 rounded-full">🍳 {{ recipe.last_cooked }}</span>
                 {% endif %}
             </div>
         </div>
@@ -238,8 +248,19 @@
             })
                 .then(r => r.json())
                 .then(d => {
-                    showToast(`${d.count} Zutaten zur Einkaufsliste hinzugefügt`);
+                    let msg = `${d.count} Zutaten zur Einkaufsliste hinzugefügt`;
+                    if (d.in_pantry > 0) msg += ` (${d.in_pantry} im Vorrat)`;
+                    showToast(msg);
                     btn.disabled = false;
+                });
+        }
+
+        function toggleFavorite(id) {
+            fetch(`/recipes/${id}/toggle_favorite`, { method: 'POST' })
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('btn-fav').textContent = d.favorite ? '⭐' : '☆';
+                    showToast(d.favorite ? 'Zu Favoriten hinzugefügt' : 'Aus Favoriten entfernt');
                 });
         }
     </script>

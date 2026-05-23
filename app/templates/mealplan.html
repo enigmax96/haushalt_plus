@@ -94,9 +94,21 @@
             </div>
         </div>
 
+        <!-- Aktionen -->
+        <div class="grid grid-cols-2 gap-3 mt-5">
+            <button onclick="randomWeek()"
+                    class="bg-amber-800 text-white rounded-xl py-3 text-sm font-semibold active:scale-95 transition-transform">
+                🎲 Zufällige Woche
+            </button>
+            <button onclick="mealplanToGrocery()"
+                    class="bg-white border border-stone-200 text-stone-700 rounded-xl py-3 text-sm font-semibold active:scale-95 transition-transform">
+                🛒 Alle einkaufen
+            </button>
+        </div>
+
         <button
             onclick="deleteAllMeals()"
-            class="mt-5 w-full py-3 text-sm text-stone-400 hover:text-red-400 transition-colors"
+            class="mt-3 w-full py-3 text-sm text-stone-400 hover:text-red-400 transition-colors"
         >Alle löschen</button>
     </div>
 
@@ -128,7 +140,19 @@
         </a>
     </nav>
 
+    <!-- Toast -->
+    <div id="toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 bg-stone-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg z-50">
+        ✓ <span id="toast-msg"></span>
+    </div>
+
     <script>
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 2500);
+        }
+
         function deleteMeal(id) {
             fetch(`/mealplan/delete/${id}`, { method: 'POST' })
                 .then(() => window.location.reload());
@@ -137,6 +161,26 @@
         function deleteAllMeals() {
             fetch('/mealplan/delete_all', { method: 'POST' })
                 .then(() => window.location.reload());
+        }
+
+        function randomWeek() {
+            fetch('/mealplan/random_week', { method: 'POST' })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.added === 0) { showToast('Alle Tage bereits belegt'); return; }
+                    showToast(`${d.added} Rezepte eingetragen`);
+                    setTimeout(() => window.location.reload(), 800);
+                });
+        }
+
+        function mealplanToGrocery() {
+            fetch('/mealplan/add_to_grocery', { method: 'POST' })
+                .then(r => r.json())
+                .then(d => {
+                    let msg = `${d.added} Einträge zur Einkaufsliste hinzugefügt`;
+                    if (d.in_pantry > 0) msg += ` (${d.in_pantry} im Vorrat)`;
+                    showToast(msg);
+                });
         }
 
         // Drag & Drop

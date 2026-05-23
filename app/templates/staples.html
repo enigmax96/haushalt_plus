@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Einkaufsliste – Haushalt+</title>
+    <title>Standardartikel – Haushalt+</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @keyframes fadeIn {
@@ -11,74 +11,64 @@
             to   { opacity: 1; transform: translateY(0); }
         }
         .fade-in { animation: fadeIn 0.3s ease both; }
-
-        @keyframes slideOut {
-            to { opacity: 0; transform: translateX(60px); max-height: 0; padding: 0; margin: 0; }
-        }
-        .slide-out { animation: slideOut 0.22s ease forwards; overflow: hidden; }
     </style>
 </head>
 <body class="bg-amber-50 min-h-screen pb-24">
 
     <!-- Header -->
-    <div class="bg-amber-800 text-white px-5 pt-8 pb-4">
-        <h1 class="text-xl font-semibold text-amber-200">Haushalt+</h1>
-        <p class="text-3xl font-bold mt-1">Einkaufsliste</p>
-        <p class="text-amber-300 text-sm mt-1">{{ items|length }} Artikel</p>
-        <div class="flex gap-2 mt-3">
-            <a href="/staples"
-               class="flex-1 text-center bg-amber-700 hover:bg-amber-600 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-colors">
-                📋 Standardartikel
-            </a>
-            <a href="/pantry"
-               class="flex-1 text-center bg-amber-700 hover:bg-amber-600 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-colors">
-                🏠 Vorrat
-            </a>
-        </div>
+    <div class="bg-amber-800 text-white px-5 pt-8 pb-6">
+        <a href="/grocery" class="text-amber-300 text-sm">← Einkaufsliste</a>
+        <p class="text-3xl font-bold mt-1">Standardartikel</p>
+        <p class="text-amber-300 text-sm mt-1">Tippen zum Einkaufen hinzufügen</p>
     </div>
 
     <div class="px-4 pt-4 max-w-lg mx-auto">
 
-        <!-- Eingabe -->
-        <form action="/grocery" method="post" class="flex gap-2 mb-4 fade-in">
+        <!-- Hinzufügen -->
+        <form action="/staples" method="post" class="flex gap-2 mb-4 fade-in">
             <input
                 type="text"
-                name="item"
-                placeholder="Produkt hinzufügen…"
+                name="name"
+                placeholder="Artikel hinzufügen…"
                 required
                 autocomplete="off"
                 class="flex-1 px-4 py-3 rounded-xl border border-stone-200 bg-white text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-base"
             >
-            <button
-                type="submit"
-                class="bg-amber-800 text-white px-5 py-3 rounded-xl font-bold text-xl active:scale-95 transition-transform"
-            >+</button>
+            <button type="submit"
+                    class="bg-amber-800 text-white px-5 py-3 rounded-xl font-bold text-xl active:scale-95 transition-transform">+</button>
         </form>
 
         <!-- Liste -->
-        <ul id="item-list" class="space-y-2">
+        {% if items %}
+        <ul class="space-y-2 fade-in">
             {% for item in items %}
-            <li id="item-{{ item.id }}" class="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm fade-in">
-                <span class="text-stone-700">{{ item.name }}</span>
-                <button
-                    onclick="deleteItem({{ item.id }})"
-                    class="text-stone-300 hover:text-red-400 active:scale-90 transition-all p-1 ml-3"
-                    aria-label="Löschen"
-                >
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <li class="bg-white rounded-xl px-4 py-3 shadow-sm flex items-center justify-between gap-3">
+                <button onclick="addToGrocery({{ item.id }}, this)"
+                        class="flex-1 text-left text-stone-700 text-sm font-medium active:scale-95 transition-transform">
+                    {{ item.name }}
+                </button>
+                <button onclick="deleteStaple({{ item.id }}, this)"
+                        class="text-stone-300 hover:text-red-400 transition-colors p-1 flex-shrink-0"
+                        aria-label="Löschen">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
                 </button>
             </li>
             {% endfor %}
         </ul>
-
-        {% if items %}
-        <button
-            onclick="deleteAllItems()"
-            class="mt-5 w-full py-3 text-sm text-stone-400 hover:text-red-400 transition-colors"
-        >Alle löschen</button>
+        {% else %}
+        <div class="text-center py-16 text-stone-400 fade-in">
+            <p class="text-4xl mb-3">📋</p>
+            <p class="font-medium">Noch keine Standardartikel</p>
+            <p class="text-sm mt-1">Füge Artikel hinzu, die du regelmäßig brauchst.</p>
+        </div>
         {% endif %}
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 bg-stone-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg z-50">
+        ✓ <span id="toast-msg"></span>
     </div>
 
     <!-- Bottom Navigation -->
@@ -110,17 +100,32 @@
     </nav>
 
     <script>
-        function deleteItem(id) {
-            const el = document.getElementById(`item-${id}`);
-            el.classList.add('slide-out');
-            setTimeout(() => {
-                fetch(`/grocery/delete/${id}`, { method: 'POST' }).then(() => el.remove());
-            }, 180);
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 2000);
         }
 
-        function deleteAllItems() {
-            fetch('/grocery/delete_all', { method: 'POST' })
-                .then(() => window.location.reload());
+        function addToGrocery(id, btn) {
+            btn.disabled = true;
+            btn.classList.add('text-amber-600');
+            fetch(`/staples/${id}/add_to_grocery`, { method: 'POST' })
+                .then(() => {
+                    showToast(`${btn.textContent.trim()} hinzugefügt`);
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.classList.remove('text-amber-600');
+                    }, 1500);
+                });
+        }
+
+        function deleteStaple(id, btn) {
+            const li = btn.closest('li');
+            li.style.opacity = '0';
+            li.style.transition = 'opacity 0.2s';
+            fetch(`/staples/delete/${id}`, { method: 'POST' })
+                .then(() => li.remove());
         }
     </script>
 </body>

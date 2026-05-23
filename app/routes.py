@@ -1,8 +1,10 @@
 """
 Handles routes, json reading/writing and weather api
 """
+import datetime
 import json
 import os
+import random
 import re
 import requests
 from flask import Blueprint, request, redirect, url_for, jsonify, render_template
@@ -219,9 +221,11 @@ def move_meal(meal_id):
     return jsonify({'status': 'moved'})
 
 ########################################### RECIPE ROUTES ###########################################
-RECIPES_FILE   = os.path.join(os.path.dirname(__file__), '../data/recipes.json')
+RECIPES_FILE    = os.path.join(os.path.dirname(__file__), '../data/recipes.json')
 CATEGORIES_FILE = os.path.join(os.path.dirname(__file__), '../data/categories.json')
-UPLOAD_FOLDER  = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
+STAPLES_FILE    = os.path.join(os.path.dirname(__file__), '../data/staples.json')
+PANTRY_FILE     = os.path.join(os.path.dirname(__file__), '../data/pantry.json')
+UPLOAD_FOLDER   = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
 
 _DEFAULT_CATEGORIES = [
     'Pasta', 'Suppe', 'Backen', 'Vegetarisch', 'Kalorienarm',
@@ -242,9 +246,12 @@ def recipes():
     q          = request.args.get('q', '').lower().strip()
     cat        = request.args.get('cat', '')
     ingredient = request.args.get('ingredient', '').lower().strip()
+    fav        = request.args.get('fav', '')
 
     all_recipes = [_normalize_recipe(r) for r in all_recipes]
     filtered = all_recipes
+    if fav:
+        filtered = [r for r in filtered if r.get('favorite', False)]
     if q:
         filtered = [r for r in filtered if q in r['name'].lower()]
     if cat:
@@ -255,7 +262,7 @@ def recipes():
         )]
 
     return render_template('recipes.html', recipes=filtered, categories=categories,
-                           q=q, cat=cat, ingredient=ingredient)
+                           q=q, cat=cat, ingredient=ingredient, fav=fav)
 
 def _scale_amount(amount_str, factor):
     if factor == 1.0:
@@ -273,6 +280,10 @@ def _normalize_recipe(r):
     cat = r.get('category', [])
     r['category'] = cat if isinstance(cat, list) else ([cat] if cat else [])
     return r
+
+def _pantry_match(ingredient_name, pantry_names):
+    ing = ingredient_name.lower().strip()
+    return any(p in ing or ing in p for p in pantry_names)
 
 @main.route('/recipes/<int:recipe_id>')
 def recipe_detail(recipe_id):
@@ -348,15 +359,33 @@ def recipe_search():
 
 @main.route('/recipes/<int:recipe_id>/add_to_mealplan', methods=['POST'])
 def recipe_add_to_mealplan(recipe_id):
-    recipe = next((r for r in load_data(RECIPES_FILE) if r['id'] == recipe_id), None)
+    all_recipes = load_data(RECIPES_FILE)
+    recipe = next((r for r in all_recipes if r['id'] == recipe_id), None)
     if not recipe:
         return jsonify({'status': 'not found'}), 404
+    for r in all_recipes:
+        if r['id'] == recipe_id:
+            r['last_cooked'] = datetime.date.today().isoformat()
+            break
+    save_data(RECIPES_FILE, all_recipes)
     meals = load_data(MEALPLAN_FILE)
     days  = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
     day   = next((d for d in days if not any(m.get('day') == d for m in meals)), 'Sonstige')
     meals.append({'id': max((m['id'] for m in meals), default=0) + 1, 'name': recipe['name'], 'day': day})
     save_data(MEALPLAN_FILE, meals)
     return jsonify({'status': 'added', 'day': day})
+
+@main.route('/recipes/<int:recipe_id>/toggle_favorite', methods=['POST'])
+def toggle_favorite(recipe_id):
+    all_recipes = load_data(RECIPES_FILE)
+    fav = False
+    for r in all_recipes:
+        if r['id'] == recipe_id:
+            r['favorite'] = not r.get('favorite', False)
+            fav = r['favorite']
+            break
+    save_data(RECIPES_FILE, all_recipes)
+    return jsonify({'favorite': fav})
 
 @main.route('/recipes/<int:recipe_id>/edit', methods=['GET', 'POST'])
 def recipe_edit(recipe_id):
@@ -410,10 +439,111 @@ def recipe_add_to_grocery(recipe_id):
     data    = request.get_json(silent=True) or {}
     factor  = float(data.get('factor', 1.0))
     grocery = load_data(GROCERY_FILE)
+    pantry_names = {p['name'].lower() for p in load_data(PANTRY_FILE)}
     next_id = max((i['id'] for i in grocery), default=0) + 1
+    in_pantry = 0
     for ing in recipe.get('ingredients', []):
         amount = _scale_amount(ing.get('amount', ''), factor)
         grocery.append({'id': next_id, 'name': f"{amount} {ing['name']}".strip()})
         next_id += 1
+        if pantry_names and _pantry_match(ing['name'], pantry_names):
+            in_pantry += 1
     save_data(GROCERY_FILE, grocery)
-    return jsonify({'status': 'added', 'count': len(recipe.get('ingredients', []))})
+    return jsonify({'status': 'added', 'count': len(recipe.get('ingredients', [])), 'in_pantry': in_pantry})
+
+########################################### MEALPLAN EXTRAS ###########################################
+@main.route('/mealplan/random_week', methods=['POST'])
+def random_week():
+    days = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
+    meals = load_data(MEALPLAN_FILE)
+    all_recipes = load_data(RECIPES_FILE)
+    if not all_recipes:
+        return jsonify({'error': 'Keine Rezepte vorhanden', 'added': 0}), 400
+    occupied = {m['day'] for m in meals}
+    empty_days = [d for d in days if d not in occupied]
+    if not empty_days:
+        return jsonify({'added': 0})
+    shuffled = list(all_recipes)
+    random.shuffle(shuffled)
+    next_id = max((m['id'] for m in meals), default=0) + 1
+    for i, day in enumerate(empty_days):
+        recipe = shuffled[i % len(shuffled)]
+        meals.append({'id': next_id, 'name': recipe['name'], 'day': day})
+        next_id += 1
+    save_data(MEALPLAN_FILE, meals)
+    return jsonify({'added': len(empty_days)})
+
+@main.route('/mealplan/add_to_grocery', methods=['POST'])
+def mealplan_to_grocery():
+    meals = load_data(MEALPLAN_FILE)
+    all_recipes = load_data(RECIPES_FILE)
+    grocery = load_data(GROCERY_FILE)
+    pantry_names = {p['name'].lower() for p in load_data(PANTRY_FILE)}
+    recipe_map = {r['name'].lower(): r for r in all_recipes}
+    next_id = max((i['id'] for i in grocery), default=0) + 1
+    added = 0
+    in_pantry = 0
+    for meal in meals:
+        name = meal.get('name', '')
+        recipe = recipe_map.get(name.lower())
+        if recipe:
+            for ing in recipe.get('ingredients', []):
+                item_name = f"{ing.get('amount', '')} {ing['name']}".strip()
+                grocery.append({'id': next_id, 'name': item_name})
+                next_id += 1
+                added += 1
+                if pantry_names and _pantry_match(ing['name'], pantry_names):
+                    in_pantry += 1
+        else:
+            grocery.append({'id': next_id, 'name': f"Zutaten für {name}"})
+            next_id += 1
+            added += 1
+    save_data(GROCERY_FILE, grocery)
+    return jsonify({'added': added, 'in_pantry': in_pantry})
+
+########################################### STAPLES ROUTES ###########################################
+@main.route('/staples', methods=['GET', 'POST'])
+def staples():
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        if name:
+            items = load_data(STAPLES_FILE)
+            items.append({'id': max((i['id'] for i in items), default=0) + 1, 'name': name})
+            save_data(STAPLES_FILE, items)
+        return redirect(url_for('main.staples'))
+    return render_template('staples.html', items=load_data(STAPLES_FILE))
+
+@main.route('/staples/delete/<int:item_id>', methods=['POST'])
+def delete_staple(item_id):
+    items = load_data(STAPLES_FILE)
+    save_data(STAPLES_FILE, [i for i in items if i['id'] != item_id])
+    return jsonify({'status': 'deleted'})
+
+@main.route('/staples/<int:item_id>/add_to_grocery', methods=['POST'])
+def staple_to_grocery(item_id):
+    items = load_data(STAPLES_FILE)
+    item = next((i for i in items if i['id'] == item_id), None)
+    if not item:
+        return jsonify({'status': 'not found'}), 404
+    grocery = load_data(GROCERY_FILE)
+    grocery.append({'id': max((i['id'] for i in grocery), default=0) + 1, 'name': item['name']})
+    save_data(GROCERY_FILE, grocery)
+    return jsonify({'status': 'added'})
+
+########################################### PANTRY ROUTES ###########################################
+@main.route('/pantry', methods=['GET', 'POST'])
+def pantry():
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        if name:
+            items = load_data(PANTRY_FILE)
+            items.append({'id': max((i['id'] for i in items), default=0) + 1, 'name': name})
+            save_data(PANTRY_FILE, items)
+        return redirect(url_for('main.pantry'))
+    return render_template('pantry.html', items=load_data(PANTRY_FILE))
+
+@main.route('/pantry/delete/<int:item_id>', methods=['POST'])
+def delete_pantry_item(item_id):
+    items = load_data(PANTRY_FILE)
+    save_data(PANTRY_FILE, [i for i in items if i['id'] != item_id])
+    return jsonify({'status': 'deleted'})
