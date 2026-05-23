@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rezept hinzufügen – Haushalt+</title>
+    <title>Rezept bearbeiten – Haushalt+</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @keyframes fadeIn {
@@ -17,18 +17,19 @@
 
     <!-- Header -->
     <div class="bg-amber-800 text-white px-5 pt-8 pb-5 flex items-center gap-3">
-        <a href="/recipes" class="text-amber-200">
+        <a href="/recipes/{{ recipe.id }}" class="text-amber-200">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
         </a>
         <div>
             <h1 class="text-xl font-semibold text-amber-200">Haushalt+</h1>
-            <p class="text-2xl font-bold">Neues Rezept</p>
+            <p class="text-2xl font-bold">Rezept bearbeiten</p>
         </div>
     </div>
 
-    <form action="/recipes/add" method="post" enctype="multipart/form-data" class="px-4 pt-4 max-w-lg mx-auto space-y-4">
+    <form action="/recipes/{{ recipe.id }}/edit" method="post" enctype="multipart/form-data"
+          class="px-4 pt-4 max-w-lg mx-auto space-y-4">
 
         <!-- Name -->
         <div class="bg-white rounded-2xl p-4 shadow-sm fade-in">
@@ -37,7 +38,7 @@
                 type="text"
                 name="name"
                 required
-                placeholder="z.B. Spaghetti Bolognese"
+                value="{{ recipe.name }}"
                 class="mt-2 w-full px-3 py-2.5 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-base"
             >
         </div>
@@ -48,8 +49,11 @@
                 <label class="text-xs font-semibold text-amber-700 uppercase tracking-wide">Kategorien</label>
                 <div class="flex flex-wrap gap-2 mt-2">
                     {% for cat in categories %}
-                    <label class="category-chip inline-flex items-center px-3 py-1.5 rounded-full border border-stone-200 bg-white cursor-pointer text-sm text-stone-600 select-none transition-colors">
-                        <input type="checkbox" name="category" value="{{ cat }}" class="sr-only" onchange="updateChip(this)">
+                    <label class="category-chip inline-flex items-center px-3 py-1.5 rounded-full border cursor-pointer text-sm select-none transition-colors
+                                  {{ 'bg-amber-800 text-white border-amber-800' if cat in recipe.category else 'bg-white text-stone-600 border-stone-200' }}">
+                        <input type="checkbox" name="category" value="{{ cat }}"
+                               {{ 'checked' if cat in recipe.category else '' }}
+                               class="sr-only" onchange="updateChip(this)">
                         {{ cat }}
                     </label>
                     {% endfor %}
@@ -62,9 +66,9 @@
                         <input
                             type="number"
                             name="prep_time"
-                            placeholder="30"
+                            value="{{ recipe.prep_time }}"
                             min="1"
-                            class="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm"
+                            class="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm"
                         >
                         <span class="text-stone-400 text-sm flex-shrink-0">min</span>
                     </div>
@@ -74,9 +78,9 @@
                     <input
                         type="number"
                         name="servings"
-                        placeholder="4"
+                        value="{{ recipe.servings }}"
                         min="1"
-                        class="mt-2 w-full px-3 py-2.5 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm"
+                        class="mt-2 w-full px-3 py-2.5 rounded-xl border border-stone-200 text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm"
                     >
                 </div>
             </div>
@@ -86,11 +90,20 @@
         <div class="bg-white rounded-2xl p-4 shadow-sm fade-in">
             <label class="text-xs font-semibold text-amber-700 uppercase tracking-wide">Foto</label>
             <div class="mt-2">
-                <label for="image-input" class="block w-full border-2 border-dashed border-stone-200 rounded-xl p-6 text-center cursor-pointer hover:border-amber-400 transition-colors">
-                    <img id="preview" src="" alt="" class="hidden w-full h-40 object-cover rounded-lg mb-3">
-                    <span id="upload-label" class="text-stone-400 text-sm">📷 Foto auswählen</span>
+                {% if recipe.image %}
+                <img id="preview" src="{{ url_for('static', filename=recipe.image) }}"
+                     alt="Aktuelles Foto" class="w-full h-40 object-cover rounded-xl mb-2">
+                {% else %}
+                <img id="preview" src="" alt="" class="hidden w-full h-40 object-cover rounded-xl mb-2">
+                {% endif %}
+                <label for="image-input"
+                       class="block w-full border-2 border-dashed border-stone-200 rounded-xl p-4 text-center cursor-pointer hover:border-amber-400 transition-colors">
+                    <span id="upload-label" class="text-stone-400 text-sm">
+                        {{ '📷 Foto ersetzen' if recipe.image else '📷 Foto auswählen' }}
+                    </span>
                 </label>
-                <input type="file" name="image" id="image-input" accept="image/*" class="hidden" onchange="previewImage(this)">
+                <input type="file" name="image" id="image-input" accept="image/*"
+                       class="hidden" onchange="previewImage(this)">
             </div>
         </div>
 
@@ -101,28 +114,31 @@
                 <button type="button" onclick="addIngredient()" class="text-amber-700 text-sm font-semibold">+ Zeile</button>
             </div>
             <div id="ingredients" class="space-y-2">
-                <!-- 3 Startzeilen -->
+                {% for ing in recipe.ingredients %}
                 <div class="ingredient-row flex gap-2 items-center">
-                    <input type="text" name="ingredient_amount" placeholder="Menge" class="w-24 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
-                    <input type="text" name="ingredient_name"   placeholder="Zutat"  class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
+                    <input type="text" name="ingredient_amount" value="{{ ing.amount }}" placeholder="Menge"
+                           class="w-24 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
+                    <input type="text" name="ingredient_name" value="{{ ing.name }}" placeholder="Zutat"
+                           class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
                     <button type="button" onclick="removeRow(this)" class="text-stone-300 hover:text-red-400 p-1 flex-shrink-0">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
                     </button>
                 </div>
+                {% else %}
                 <div class="ingredient-row flex gap-2 items-center">
-                    <input type="text" name="ingredient_amount" placeholder="Menge" class="w-24 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
-                    <input type="text" name="ingredient_name"   placeholder="Zutat"  class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
+                    <input type="text" name="ingredient_amount" placeholder="Menge"
+                           class="w-24 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
+                    <input type="text" name="ingredient_name" placeholder="Zutat"
+                           class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
                     <button type="button" onclick="removeRow(this)" class="text-stone-300 hover:text-red-400 p-1 flex-shrink-0">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
                     </button>
                 </div>
-                <div class="ingredient-row flex gap-2 items-center">
-                    <input type="text" name="ingredient_amount" placeholder="Menge" class="w-24 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
-                    <input type="text" name="ingredient_name"   placeholder="Zutat"  class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
-                    <button type="button" onclick="removeRow(this)" class="text-stone-300 hover:text-red-400 p-1 flex-shrink-0">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
-                </div>
+                {% endfor %}
             </div>
         </div>
 
@@ -133,29 +149,36 @@
                 <button type="button" onclick="addStep()" class="text-amber-700 text-sm font-semibold">+ Schritt</button>
             </div>
             <div id="steps" class="space-y-2">
+                {% for step in recipe.steps %}
+                <div class="step-row flex gap-2 items-start">
+                    <span class="step-num flex-shrink-0 w-6 h-6 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center text-xs font-bold mt-2">{{ loop.index }}</span>
+                    <textarea name="step" rows="2"
+                              class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm resize-none">{{ step }}</textarea>
+                    <button type="button" onclick="removeRow(this)" class="text-stone-300 hover:text-red-400 p-1 flex-shrink-0 mt-2">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                {% else %}
                 <div class="step-row flex gap-2 items-start">
                     <span class="step-num flex-shrink-0 w-6 h-6 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center text-xs font-bold mt-2">1</span>
-                    <textarea name="step" rows="2" placeholder="Schritt beschreiben…" class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm resize-none"></textarea>
+                    <textarea name="step" rows="2" placeholder="Schritt beschreiben…"
+                              class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm resize-none"></textarea>
                     <button type="button" onclick="removeRow(this)" class="text-stone-300 hover:text-red-400 p-1 flex-shrink-0 mt-2">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
                     </button>
                 </div>
-                <div class="step-row flex gap-2 items-start">
-                    <span class="step-num flex-shrink-0 w-6 h-6 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center text-xs font-bold mt-2">2</span>
-                    <textarea name="step" rows="2" placeholder="Schritt beschreiben…" class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm resize-none"></textarea>
-                    <button type="button" onclick="removeRow(this)" class="text-stone-300 hover:text-red-400 p-1 flex-shrink-0 mt-2">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
-                </div>
+                {% endfor %}
             </div>
         </div>
 
         <!-- Speichern -->
-        <button
-            type="submit"
-            class="w-full bg-amber-800 text-white py-4 rounded-2xl font-bold text-base active:scale-95 transition-transform shadow-sm"
-        >
-            Rezept speichern
+        <button type="submit"
+                class="w-full bg-amber-800 text-white py-4 rounded-2xl font-bold text-base active:scale-95 transition-transform shadow-sm">
+            Änderungen speichern
         </button>
 
     </form>
@@ -212,18 +235,15 @@
             reader.readAsDataURL(input.files[0]);
         }
 
-        function ingredientRowHtml() {
-            return `<div class="ingredient-row flex gap-2 items-center">
-                <input type="text" name="ingredient_amount" placeholder="Menge" class="w-24 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
-                <input type="text" name="ingredient_name" placeholder="Zutat" class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
-                <button type="button" onclick="removeRow(this)" class="text-stone-300 hover:text-red-400 p-1 flex-shrink-0">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>`;
-        }
-
         function addIngredient() {
-            document.getElementById('ingredients').insertAdjacentHTML('beforeend', ingredientRowHtml());
+            document.getElementById('ingredients').insertAdjacentHTML('beforeend', `
+                <div class="ingredient-row flex gap-2 items-center">
+                    <input type="text" name="ingredient_amount" placeholder="Menge" class="w-24 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
+                    <input type="text" name="ingredient_name" placeholder="Zutat" class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 text-sm">
+                    <button type="button" onclick="removeRow(this)" class="text-stone-300 hover:text-red-400 p-1 flex-shrink-0">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>`);
         }
 
         function addStep() {
@@ -241,7 +261,6 @@
 
         function removeRow(btn) {
             btn.closest('[class*="-row"]').remove();
-            // Schritt-Nummern neu zählen
             document.querySelectorAll('#steps .step-num').forEach((el, i) => el.textContent = i + 1);
         }
     </script>

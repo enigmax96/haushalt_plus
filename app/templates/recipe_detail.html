@@ -35,14 +35,26 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
         </a>
+        <a href="/recipes/{{ recipe.id }}/edit"
+           class="absolute top-4 right-4 bg-black/30 backdrop-blur-sm text-white rounded-full p-2">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+        </a>
     </div>
     {% else %}
     <div class="relative h-40 w-full bg-amber-100 flex items-center justify-center text-7xl">
-        {{ cat_emoji.get(recipe.category, '🍽️') }}
+        {{ cat_emoji.get(recipe.category[0] if recipe.category else '', '🍽️') }}
         <a href="/recipes"
            class="absolute top-4 left-4 bg-white/70 backdrop-blur-sm text-stone-700 rounded-full p-2">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </a>
+        <a href="/recipes/{{ recipe.id }}/edit"
+           class="absolute top-4 right-4 bg-white/70 backdrop-blur-sm text-stone-700 rounded-full p-2">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
             </svg>
         </a>
     </div>
@@ -54,9 +66,9 @@
         <div class="bg-white rounded-2xl p-4 shadow-sm -mt-4 relative fade-in">
             <h1 class="text-xl font-bold text-stone-800">{{ recipe.name }}</h1>
             <div class="flex flex-wrap gap-2 mt-2">
-                {% if recipe.category %}
-                <span class="text-xs bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full font-medium">{{ recipe.category }}</span>
-                {% endif %}
+                {% for cat in recipe.category %}
+                <span class="text-xs bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full font-medium">{{ cat }}</span>
+                {% endfor %}
                 {% if recipe.prep_time %}
                 <span class="text-xs bg-stone-100 text-stone-600 px-2.5 py-1 rounded-full">⏱ {{ recipe.prep_time }} min</span>
                 {% endif %}
@@ -65,6 +77,20 @@
                 {% endif %}
             </div>
         </div>
+
+        <!-- Portionsrechner -->
+        {% if recipe.servings %}
+        <div class="bg-white rounded-2xl px-4 py-3 shadow-sm mt-3 fade-in flex items-center justify-between">
+            <span class="text-sm text-stone-500">Portionen</span>
+            <div class="flex items-center gap-4">
+                <button type="button" onclick="changePortions(-1)"
+                        class="w-8 h-8 rounded-full bg-stone-100 text-stone-700 flex items-center justify-center text-lg font-bold active:scale-95 transition-transform">−</button>
+                <span id="portions-display" class="text-stone-800 font-semibold w-6 text-center">{{ recipe.servings }}</span>
+                <button type="button" onclick="changePortions(1)"
+                        class="w-8 h-8 rounded-full bg-amber-800 text-white flex items-center justify-center text-lg font-bold active:scale-95 transition-transform">+</button>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Aktionsbuttons -->
         <div class="grid grid-cols-2 gap-3 mt-3 fade-in">
@@ -91,7 +117,7 @@
             <ul class="space-y-2">
                 {% for ing in recipe.ingredients %}
                 <li class="flex items-baseline gap-3 text-sm">
-                    <span class="text-stone-400 min-w-[4rem] text-right flex-shrink-0">{{ ing.amount }}</span>
+                    <span class="text-stone-400 min-w-[4rem] text-right flex-shrink-0" data-original-amount="{{ ing.amount }}">{{ ing.amount }}</span>
                     <span class="text-stone-700">{{ ing.name }}</span>
                 </li>
                 {% endfor %}
@@ -157,6 +183,32 @@
     </nav>
 
     <script>
+        // Portionsrechner
+        const originalPortions = {{ recipe.servings | int if recipe.servings else 1 }};
+        let currentPortions = originalPortions;
+
+        function changePortions(delta) {
+            const next = Math.max(1, currentPortions + delta);
+            if (next === currentPortions) return;
+            currentPortions = next;
+            document.getElementById('portions-display').textContent = currentPortions;
+            const factor = currentPortions / originalPortions;
+            document.querySelectorAll('[data-original-amount]').forEach(el => {
+                el.textContent = scaleAmount(el.dataset.originalAmount, factor);
+            });
+        }
+
+        function scaleAmount(amount, factor) {
+            const m = amount.match(/^(\d+(?:[.,]\d+)?)(.*)/);
+            if (!m) return amount;
+            const num = parseFloat(m[1].replace(',', '.'));
+            const scaled = num * factor;
+            const str = Number.isInteger(scaled)
+                ? scaled.toString()
+                : parseFloat(scaled.toFixed(2)).toString().replace('.', ',');
+            return str + m[2];
+        }
+
         function showToast(msg) {
             const t = document.getElementById('toast');
             document.getElementById('toast-msg').textContent = msg;

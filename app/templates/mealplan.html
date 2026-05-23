@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wochenplan – Haushalt+</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <style>
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(8px); }
@@ -45,55 +46,52 @@
             >+</button>
         </form>
 
-        <!-- Tage -->
+        <!-- Tage (Drag & Drop zwischen Tagen) -->
         <div class="space-y-2">
             {% for day in ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'] %}
             <div class="bg-white rounded-xl px-4 py-3 shadow-sm fade-in">
                 <p class="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">{{ day }}</p>
-                {% if meals_by_day[day] %}
-                <ul class="space-y-1">
+                <ul class="space-y-1 min-h-[2rem]" data-day-list="{{ day }}">
                     {% for meal in meals_by_day[day] %}
-                    <li class="flex items-center justify-between">
+                    <li data-meal-id="{{ meal.id }}"
+                        class="flex items-center justify-between cursor-grab active:cursor-grabbing select-none">
                         <span class="text-stone-700 text-sm">{{ meal.name }}</span>
-                        <button
-                            onclick="deleteMeal({{ meal.id }})"
-                            class="text-stone-300 hover:text-red-400 active:scale-90 transition-all p-1 ml-2"
-                            aria-label="Löschen"
-                        >
+                        <button onclick="deleteMeal({{ meal.id }})"
+                                class="text-stone-300 hover:text-red-400 active:scale-90 transition-all p-1 ml-2"
+                                aria-label="Löschen">
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                             </svg>
                         </button>
                     </li>
+                    {% else %}
+                    <li class="no-drag empty-placeholder text-stone-300 text-sm pointer-events-none">–</li>
                     {% endfor %}
                 </ul>
-                {% else %}
-                <p class="text-stone-300 text-sm">–</p>
-                {% endif %}
             </div>
             {% endfor %}
 
-            {% if meals_by_day['Sonstige'] %}
+            <!-- Sonstige (immer sichtbar als Drop-Ziel) -->
             <div class="bg-white rounded-xl px-4 py-3 shadow-sm fade-in">
                 <p class="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">Sonstige</p>
-                <ul class="space-y-1">
+                <ul class="space-y-1 min-h-[2rem]" data-day-list="Sonstige">
                     {% for meal in meals_by_day['Sonstige'] %}
-                    <li class="flex items-center justify-between">
+                    <li data-meal-id="{{ meal.id }}"
+                        class="flex items-center justify-between cursor-grab active:cursor-grabbing select-none">
                         <span class="text-stone-700 text-sm">{{ meal.name }}</span>
-                        <button
-                            onclick="deleteMeal({{ meal.id }})"
-                            class="text-stone-300 hover:text-red-400 active:scale-90 transition-all p-1 ml-2"
-                            aria-label="Löschen"
-                        >
+                        <button onclick="deleteMeal({{ meal.id }})"
+                                class="text-stone-300 hover:text-red-400 active:scale-90 transition-all p-1 ml-2"
+                                aria-label="Löschen">
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                             </svg>
                         </button>
                     </li>
+                    {% else %}
+                    <li class="no-drag empty-placeholder text-stone-300 text-sm pointer-events-none">–</li>
                     {% endfor %}
                 </ul>
             </div>
-            {% endif %}
         </div>
 
         <button
@@ -140,6 +138,31 @@
             fetch('/mealplan/delete_all', { method: 'POST' })
                 .then(() => window.location.reload());
         }
+
+        // Drag & Drop
+        const PLACEHOLDER = '<li class="no-drag empty-placeholder text-stone-300 text-sm pointer-events-none">–</li>';
+        document.querySelectorAll('[data-day-list]').forEach(ul => {
+            new Sortable(ul, {
+                group: 'meals',
+                animation: 150,
+                filter: '.no-drag',
+                ghostClass: 'opacity-40',
+                onEnd(evt) {
+                    if (evt.from === evt.to) return;
+                    const mealId = parseInt(evt.item.dataset.mealId);
+                    const newDay = evt.to.dataset.dayList;
+                    evt.to.querySelectorAll('.empty-placeholder').forEach(el => el.remove());
+                    if (evt.from.querySelectorAll('[data-meal-id]').length === 0) {
+                        evt.from.insertAdjacentHTML('beforeend', PLACEHOLDER);
+                    }
+                    fetch(`/mealplan/move/${mealId}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({day: newDay})
+                    });
+                }
+            });
+        });
 
         // Autocomplete
         const mealInput   = document.getElementById('meal-input');
