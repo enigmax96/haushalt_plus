@@ -230,7 +230,12 @@
         function addToGrocery(id) {
             const btn = document.getElementById('btn-grocery');
             btn.disabled = true;
-            fetch(`/recipes/${id}/add_to_grocery`, { method: 'POST' })
+            const factor = currentPortions / originalPortions;
+            fetch(`/recipes/${id}/add_to_grocery`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({factor: factor})
+            })
                 .then(r => r.json())
                 .then(d => {
                     showToast(`${d.count} Zutaten zur Einkaufsliste hinzugefügt`);

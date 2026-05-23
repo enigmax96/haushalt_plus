@@ -3,6 +3,7 @@ Handles routes, json reading/writing and weather api
 """
 import json
 import os
+import re
 import requests
 from flask import Blueprint, request, redirect, url_for, jsonify, render_template
 
@@ -256,6 +257,17 @@ def recipes():
     return render_template('recipes.html', recipes=filtered, categories=categories,
                            q=q, cat=cat, ingredient=ingredient)
 
+def _scale_amount(amount_str, factor):
+    if factor == 1.0:
+        return amount_str
+    m = re.match(r'^(\d+(?:[.,]\d+)?)(.*)', amount_str.strip())
+    if not m:
+        return amount_str
+    num = float(m.group(1).replace(',', '.'))
+    scaled = num * factor
+    formatted = str(int(scaled)) if scaled == int(scaled) else str(round(scaled, 2)).replace('.', ',')
+    return formatted + m.group(2)
+
 def _normalize_recipe(r):
     r = dict(r)
     cat = r.get('category', [])
@@ -395,10 +407,13 @@ def recipe_add_to_grocery(recipe_id):
     recipe = next((r for r in load_data(RECIPES_FILE) if r['id'] == recipe_id), None)
     if not recipe:
         return jsonify({'status': 'not found'}), 404
-    grocery  = load_data(GROCERY_FILE)
-    next_id  = max((i['id'] for i in grocery), default=0) + 1
+    data    = request.get_json(silent=True) or {}
+    factor  = float(data.get('factor', 1.0))
+    grocery = load_data(GROCERY_FILE)
+    next_id = max((i['id'] for i in grocery), default=0) + 1
     for ing in recipe.get('ingredients', []):
-        grocery.append({'id': next_id, 'name': f"{ing['amount']} {ing['name']}".strip()})
+        amount = _scale_amount(ing.get('amount', ''), factor)
+        grocery.append({'id': next_id, 'name': f"{amount} {ing['name']}".strip()})
         next_id += 1
     save_data(GROCERY_FILE, grocery)
     return jsonify({'status': 'added', 'count': len(recipe.get('ingredients', []))})
