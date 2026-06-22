@@ -6,6 +6,7 @@ import json
 import os
 import random
 import re
+import uuid
 import requests
 from flask import Blueprint, request, redirect, url_for, jsonify, render_template
 
@@ -15,6 +16,7 @@ main = Blueprint('main', __name__)
 GROCERY_FILE = os.path.join(os.path.dirname(__file__), '../data/grocery.json')
 MEALPLAN_FILE = os.path.join(os.path.dirname(__file__), '../data/mealplan.json')
 TRASH_FILE = os.path.join(os.path.dirname(__file__), '../data/trash.json')
+CALENDAR_FILE = os.path.join(os.path.dirname(__file__), '../data/calendar.json')
 
 def load_data(file):
     try:
@@ -546,4 +548,59 @@ def pantry():
 def delete_pantry_item(item_id):
     items = load_data(PANTRY_FILE)
     save_data(PANTRY_FILE, [i for i in items if i['id'] != item_id])
+    return jsonify({'status': 'deleted'})
+
+########################################### CALENDAR ROUTES ###########################################
+@main.route('/kalender')
+def kalender():
+    return render_template('kalender.html')
+
+@main.route('/kalender/events')
+def get_calendar_events():
+    events = load_data(CALENDAR_FILE)
+    if not isinstance(events, list):
+        events = []
+    return jsonify(events)
+
+@main.route('/kalender/events/add', methods=['POST'])
+def add_calendar_event():
+    data = request.json
+    events = load_data(CALENDAR_FILE)
+    if not isinstance(events, list):
+        events = []
+    new_event = {
+        'id': str(uuid.uuid4()),
+        'title': data.get('title', ''),
+        'start': data.get('start', ''),
+        'allDay': data.get('allDay', True),
+        'resourceId': data.get('resourceId', 'max'),
+        'color': data.get('color', '#6366f1'),
+    }
+    events.append(new_event)
+    save_data(CALENDAR_FILE, events)
+    return jsonify(new_event), 201
+
+@main.route('/kalender/events/<event_id>/edit', methods=['POST'])
+def edit_calendar_event(event_id):
+    data = request.json
+    events = load_data(CALENDAR_FILE)
+    if not isinstance(events, list):
+        events = []
+    for event in events:
+        if event['id'] == event_id:
+            event['title'] = data.get('title', event['title'])
+            event['start'] = data.get('start', event['start'])
+            event['allDay'] = data.get('allDay', event.get('allDay', True))
+            event['resourceId'] = data.get('resourceId', event.get('resourceId', 'max'))
+            event['color'] = data.get('color', event.get('color', '#6366f1'))
+            break
+    save_data(CALENDAR_FILE, events)
+    return jsonify({'status': 'updated'})
+
+@main.route('/kalender/events/<event_id>/delete', methods=['POST'])
+def delete_calendar_event(event_id):
+    events = load_data(CALENDAR_FILE)
+    if not isinstance(events, list):
+        events = []
+    save_data(CALENDAR_FILE, [e for e in events if e['id'] != event_id])
     return jsonify({'status': 'deleted'})
